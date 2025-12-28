@@ -1,1 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Perfis · NeuroNexus</title>
+  <link rel="stylesheet" href="../assets/app.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Perfis</h1>
+        <p>Fixos (nome, nascimento) + semipermanentes (ex.: alergias). Selecione um membro ativo.</p>
+      </div>
+      <nav class="nav">
+        <a class="btn" href="../index.html">🏠 Home</a>
+        <a class="btn" href="../events/index.html">🧾 Eventos</a>
+        <a class="btn primary" href="./edit.html">+ Novo perfil</a>
+      </nav>
+    </div>
+
+    <section class="card">
+      <div class="row">
+        <div class="field" style="flex:1; min-width:240px">
+          <label>Nome do Hub (casa)</label>
+          <input id="hubName" placeholder="Ex.: Casa da Keity" />
+        </div>
+        <div class="field" style="flex:1; min-width:240px">
+          <label>Administrador(a)</label>
+          <input id="adminName" placeholder="Ex.: Keity" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="saveHub">Salvar Hub</button>
+        <span class="small">Isso é local. Sem login.</span>
+      </div>
+    </section>
+
+    <h2 style="margin:16px 0 10px">Membros</h2>
+    <table class="table" aria-label="Lista de perfis">
+      <thead>
+        <tr>
+          <th>Ativo</th>
+          <th>Nome</th>
+          <th>Nascimento</th>
+          <th>Papel</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <p class="hint">
+      A regra do NeuroNexus: dados permanentes não somem — no máximo ficam inativos.
+      Eventos ficam na aba “Eventos”.
+    </p>
+  </main>
+
+  <script type="module">
+    import {
+      loadHub, saveHub,
+      loadProfiles, deleteProfile,
+      loadActiveProfileId, setActiveProfileId
+    } from "../assets/app.js";
+
+    const hubName = document.getElementById("hubName");
+    const adminName = document.getElementById("adminName");
+    const rows = document.getElementById("rows");
+
+    function renderHub(){
+      const hub = loadHub();
+      hubName.value = hub.hubName || "";
+      adminName.value = hub.adminName || "";
+    }
+
+    function renderRows(){
+      const profiles = loadProfiles();
+      const activeId = loadActiveProfileId();
+      rows.innerHTML = "";
+
+      if (!profiles.length){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="5">Nenhum perfil ainda. Clique em “Novo perfil”.</td>`;
+        rows.appendChild(tr);
+        return;
+      }
+
+      for (const p of profiles){
+        const isActive = p.id === activeId;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><button class="btn ${isActive ? "primary" : ""}" data-act="${p.id}">${isActive ? "Ativo" : "Ativar"}</button></td>
+          <td>${escapeHtml(p.name || "")}</td>
+          <td>${escapeHtml(p.birthDate || "—")}</td>
+          <td>${escapeHtml(p.role || "membro")}</td>
+          <td class="row" style="gap:8px; justify-content:flex-start">
+            <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
+            <button class="btn danger" data-del="${p.id}">Remover</button>
+          </td>
+        `;
+        rows.appendChild(tr);
+      }
+
+      rows.querySelectorAll("[data-act]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          setActiveProfileId(btn.getAttribute("data-act"));
+          renderRows();
+        });
+      });
+
+      rows.querySelectorAll("[data-del]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.getAttribute("data-del");
+          const ok = confirm("Remover este perfil?");
+          if (!ok) return;
+          deleteProfile(id);
+          renderRows();
+        });
+      });
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    document.getElementById("saveHub").addEventListener("click", ()=>{
+      saveHub({ hubName: hubName.value.trim(), adminName: adminName.value.trim() });
+      alert("Hub salvo.");
+    });
+
+    renderHub();
+    renderRows();
+  </script>
+</body>
+</html>
 
