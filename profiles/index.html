@@ -88,4 +88,106 @@
       if (!ymd) return "—";
       try{
         const [y,m,d] = ymd.split("-").map(Number);
-        if (!y || !m
+        if (!y || !m || !d) return ymd;
+        return String(d).padStart(2,"0") + "/" + String(m).padStart(2,"0") + "/" + y;
+      }catch{
+        return ymd;
+      }
+    }
+
+    function escapeHtml(str){
+      return String(str || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function getList(){
+      const activeId = loadActiveProfileId();
+      const q = (filter.value || "").trim().toLowerCase();
+      let list = loadProfiles();
+
+      if (q){
+        list = list.filter(p => String(p.name || "").toLowerCase().includes(q));
+      }
+
+      const mode = sort.value;
+      if (mode === "nameAZ"){
+        list.sort((a,b)=> String(a.name||"").localeCompare(String(b.name||""), "pt-BR"));
+      } else if (mode === "recent"){
+        list.sort((a,b)=> String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+      } else { // activeFirst
+        list.sort((a,b)=>{
+          const ax = a.id === activeId ? 0 : 1;
+          const bx = b.id === activeId ? 0 : 1;
+          if (ax !== bx) return ax - bx;
+          return String(a.name||"").localeCompare(String(b.name||""), "pt-BR");
+        });
+      }
+
+      return { list, activeId };
+    }
+
+    function render(){
+      const { list, activeId } = getList();
+      rows.innerHTML = "";
+
+      if (!list.length){
+        rows.innerHTML = `<tr><td colspan="5">Nenhum membro encontrado.</td></tr>`;
+        hint.textContent = "Dica: crie um perfil para cada membro do Clã e defina um deles como ativo.";
+        return;
+      }
+
+      for (const p of list){
+        const isActive = p.id === activeId;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            <button class="btn ${isActive ? "primary" : ""}" data-active="${p.id}">
+              ${isActive ? "Ativo" : "Definir"}
+            </button>
+          </td>
+          <td><strong>${escapeHtml(p.name || "Sem nome")}</strong></td>
+          <td>${escapeHtml(p.role || "—")}</td>
+          <td>${escapeHtml(fmtDate(p.birthDate || ""))}</td>
+          <td class="row" style="gap:8px">
+            <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
+            <button class="btn danger" data-del="${p.id}">Excluir</button>
+          </td>
+        `;
+        rows.appendChild(tr);
+      }
+
+      // set active
+      rows.querySelectorAll("[data-active]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.getAttribute("data-active");
+          setActiveProfileId(id);
+          render();
+        });
+      });
+
+      // delete
+      rows.querySelectorAll("[data-del]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const id = btn.getAttribute("data-del");
+          const ok = confirm("Excluir este perfil? Isso remove apenas do seu navegador.");
+          if (!ok) return;
+          deleteProfile(id);
+          render();
+        });
+      });
+
+      hint.textContent = "Tudo fica salvo apenas neste navegador (LocalStorage).";
+    }
+
+    filter.addEventListener("input", render);
+    sort.addEventListener("change", render);
+
+    render();
+  </script>
+</body>
+</html>
