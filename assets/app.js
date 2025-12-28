@@ -5,7 +5,7 @@ export const KEYS = {
   PROFILES: "neuronexus.profiles.v1",
   ACTIVE_PROFILE: "neuronexus.profileActiveId.v1",
   EVENTS: "neuronexus.events.v1",
-  HUB: "neuronexus.hub.v1"
+  HUB: "neuronexus.hub.v1" // Interno; na UI chamaremos de "Clã"
 };
 
 export function nowIso(){ return new Date().toISOString(); }
@@ -22,7 +22,7 @@ export function formatWhen(iso){
   try { return new Date(iso).toLocaleString(); } catch { return "—"; }
 }
 
-// ---- HUB ----
+// ---- "Clã" (internamente HUB) ----
 export function defaultHub(){
   return { hubName: "", adminName: "", updatedAt: nowIso() };
 }
@@ -65,17 +65,30 @@ export function clearHouse(){
 }
 
 // ---- PROFILES ----
-// Perfil tem: fixos + semipermanentes (listas) — eventos ficam separado
+// Perfil = fixos + semipermanentes (inclui mosaico neuro e reações etc. em fases seguintes)
+// Eventos ficam em outra chave (histórico)
 export function defaultProfile(){
   return {
     id: uid("p"),
+
     // FIXOS
     name: "",
     birthDate: "", // YYYY-MM-DD
-    role: "membro", // criança, responsável, etc.
-    // SEMIPERMANENTES
-    allergies: [], // {id, label, startedAt, active, notes}
-    notes: "", // notas operacionais gerais
+    role: "membro",
+
+    // 🧠 NEURO (mosaico)
+    neuro: {
+      base: [],         // [{key,label,status,since,notes}]
+      layers: [],       // [{key,label,group,status,since,notes}]
+      combinations: []  // [{key,label,status,since,notes}]
+    },
+
+    // SEMIPERMANENTES (já implementado no MVP atual)
+    allergies: [], // {id,label,startedAt,active,notes}
+
+    // notas operacionais gerais
+    notes: "",
+
     createdAt: nowIso(),
     updatedAt: nowIso()
   };
@@ -102,9 +115,17 @@ export function setActiveProfileId(id){
 export function upsertProfile(profile){
   const list = loadProfiles();
   const p = { ...defaultProfile(), ...profile, updatedAt: nowIso() };
+
+  // upgrade-safe: garante forma do neuro
+  p.neuro = p.neuro || { base: [], layers: [], combinations: [] };
+  p.neuro.base = Array.isArray(p.neuro.base) ? p.neuro.base : [];
+  p.neuro.layers = Array.isArray(p.neuro.layers) ? p.neuro.layers : [];
+  p.neuro.combinations = Array.isArray(p.neuro.combinations) ? p.neuro.combinations : [];
+
   const idx = list.findIndex(x => x.id === p.id);
   if (idx >= 0) list[idx] = p;
   else list.push(p);
+
   saveProfiles(list);
   return p;
 }
@@ -112,6 +133,7 @@ export function upsertProfile(profile){
 export function deleteProfile(id){
   const list = loadProfiles().filter(p => p.id !== id);
   saveProfiles(list);
+
   if (loadActiveProfileId() === id) {
     const next = list[0]?.id || "";
     if (next) setActiveProfileId(next);
@@ -120,14 +142,14 @@ export function deleteProfile(id){
 }
 
 // ---- EVENTS (A) ----
-// Eventos podem ser do HUB ou de um PROFILE (ou ambos)
+// Eventos podem ser do "Clã" ou de um perfil (membro)
 export function defaultEvent(){
   return {
     id: uid("e"),
     scope: "hub", // "hub" | "profile"
     profileId: "", // se scope="profile"
-    type: "crise", // crise, sono, escola, saúde, rotina...
-    context: "casa", // casa, escola, saúde, emergência
+    type: "crise", // crise, sono, escola, saude, rotina...
+    context: "casa", // casa, escola, saude, emergencia
     startedAt: nowIso(),
     endedAt: "", // vazio = em andamento
     severity: "", // opcional: leve/moderado/intenso
@@ -158,4 +180,3 @@ export function deleteEvent(id){
   const list = loadEvents().filter(e => e.id !== id);
   saveEvents(list);
 }
-
