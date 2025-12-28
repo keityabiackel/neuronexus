@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Eventos · NeuroNexus</title>
+  <link rel="stylesheet" href="../assets/app.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Eventos</h1>
+        <p>Dados temporais com timestamp. Cada evento pode ser do HUB ou de um MEMBRO.</p>
+      </div>
+      <nav class="nav">
+        <a class="btn" href="../index.html">🏠 Home</a>
+        <a class="btn" href="../profiles/index.html">👤 Perfis</a>
+        <a class="btn primary" href="./new.html">+ Novo evento</a>
+      </nav>
+    </div>
+
+    <section class="card row">
+      <div class="field" style="flex:1; min-width:240px">
+        <label for="filter">Filtro</label>
+        <select id="filter">
+          <option value="all">Todos</option>
+          <option value="hub">Apenas HUB</option>
+          <option value="profile">Apenas MEMBROS</option>
+        </select>
+      </div>
+      <div class="small" id="count">—</div>
+    </section>
+
+    <table class="table" style="margin-top:12px">
+      <thead>
+        <tr>
+          <th>Escopo</th>
+          <th>Alvo</th>
+          <th>Tipo</th>
+          <th>Contexto</th>
+          <th>Início</th>
+          <th>Fim</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <p class="hint">
+      Eventos são histórico: começo/fim (ou “em andamento”) e notas observáveis.
+    </p>
+  </main>
+
+  <script type="module">
+    import { loadHub, loadProfiles, loadEvents, deleteEvent, formatWhen } from "../assets/app.js";
+
+    const rows = document.getElementById("rows");
+    const filter = document.getElementById("filter");
+    const count = document.getElementById("count");
+
+    function render(){
+      const hub = loadHub();
+      const profiles = loadProfiles();
+      const map = new Map(profiles.map(p => [p.id, p]));
+      let events = loadEvents();
+
+      // mais recente primeiro
+      events.sort((a,b)=> (b.startedAt || "").localeCompare(a.startedAt || ""));
+
+      const f = filter.value;
+      if (f !== "all") events = events.filter(e => e.scope === f);
+
+      rows.innerHTML = "";
+
+      if (!events.length){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="7">Nenhum evento registrado.</td>`;
+        rows.appendChild(tr);
+        count.textContent = "0 eventos";
+        return;
+      }
+
+      for (const e of events){
+        const target =
+          e.scope === "hub"
+            ? (hub.hubName?.trim() || "HUB")
+            : (map.get(e.profileId)?.name || "(perfil removido)");
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${e.scope === "hub" ? "HUB" : "MEMBRO"}</td>
+          <td>${escapeHtml(target)}</td>
+          <td>${escapeHtml(e.type || "")}</td>
+          <td>${escapeHtml(e.context || "")}</td>
+          <td>${escapeHtml(formatWhen(e.startedAt))}</td>
+          <td>${e.endedAt ? escapeHtml(formatWhen(e.endedAt)) : "—"}</td>
+          <td><button class="btn danger" data-del="${e.id}">Remover</button></td>
+        `;
+        rows.appendChild(tr);
+      }
+
+      rows.querySelectorAll("[data-del]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const ok = confirm("Remover este evento?");
+          if (!ok) return;
+          deleteEvent(btn.getAttribute("data-del"));
+          render();
+        });
+      });
+
+      count.textContent = `${events.length} evento(s)`;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    filter.addEventListener("change", render);
+    render();
+  </script>
+</body>
+</html>
