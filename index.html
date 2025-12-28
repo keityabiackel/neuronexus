@@ -3,112 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NeuroNexus Hub</title>
+  <title>NeuroNexus</title>
+
+  <!-- Fontes (mesma “pegada PRISMAS”) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./assets/app.css" />
 </head>
 <body>
   <main class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <h1>NeuroNexus Hub</h1>
-        <p>MVP Fase 0 — Estado da Casa (B). Menos interpretação; mais dados observáveis.</p>
+    <header class="header">
+      <div class="brandline">
+        <div class="logo" aria-label="Logo NeuroNexus">
+          <img src="./assets/logo.png" alt="Logo NeuroNexus" />
+        </div>
+        <div class="brandtext">
+          <h1>NEURONEXUS</h1>
+          <p>Dados observáveis para coordenação familiar neurodivergente (MVP · client-side)</p>
+        </div>
       </div>
+
       <nav class="nav">
-        <div class="chip" id="hubChip">Hub: —</div>
-        <div class="chip" id="activeChip">Ativo: —</div>
-        <a class="btn" href="./profiles/index.html">👤 Perfis</a>
-        <a class="btn" href="./events/index.html">🧾 Eventos</a>
+        <a class="btn" href="./profiles/index.html">👥 Perfis</a>
       </nav>
-    </div>
+    </header>
 
-    <section class="card row" aria-label="Estado atual da casa">
-      <div class="pill">
-        <span class="dot" id="dot"></span>
-        <span>Estado da Casa:</span>
-        <span id="stateLabel">INDEFINIDO</span>
+    <section class="card">
+      <h2>Estado da Casa</h2>
+      <p class="small" style="margin-top:0">
+        Um indicador compartilhado, simples e acionável do estado do ambiente doméstico.
+        Menos interpretação; mais dados observáveis.
+      </p>
+
+      <div class="badge" style="margin: 10px 0 12px">
+        <div class="row" style="gap:10px">
+          <span id="dot" class="dot yellow"></span>
+          <strong id="stateLabel">EM BREVE</strong>
+        </div>
+        <span class="small" id="updatedAt">—</span>
       </div>
-      <div class="small" id="timestamp">—</div>
+
+      <div class="row">
+        <button class="btn" id="g" type="button">🟢 VERDE</button>
+        <button class="btn primary" id="y" type="button">🟡 AMARELO</button>
+        <button class="btn" id="r" type="button">🔴 VERMELHO</button>
+        <button class="btn" id="clear" type="button">Limpar estado</button>
+      </div>
+
+      <p class="hint">
+        Atalhos: 1 (Verde), 2 (Amarelo), 3 (Vermelho). Salvo apenas no seu navegador (LocalStorage).
+      </p>
+
+      <div class="footer-note">
+        <span>NeuroNexus · client-side · sem backend</span>
+        <span id="mini">—</span>
+      </div>
     </section>
-
-    <section class="grid3" aria-label="Controles de estado">
-      <button class="statebtn green" id="btnGreen" type="button">🟢 VERDE</button>
-      <button class="statebtn yellow" id="btnYellow" type="button">🟡 AMARELO</button>
-      <button class="statebtn red" id="btnRed" type="button">🔴 VERMELHO</button>
-    </section>
-
-    <p class="hint">
-      Atalhos: <strong>1</strong> Verde, <strong>2</strong> Amarelo, <strong>3</strong> Vermelho.
-      <br/>Tudo é salvo localmente (LocalStorage). Nada é enviado.
-    </p>
-
-    <div class="row" style="margin-top:12px">
-      <button class="btn ghost" id="btnClear" type="button">Limpar estado</button>
-      <span class="small">client-side · sem backend</span>
-    </div>
   </main>
 
   <script type="module">
-    import {
-      loadHub, loadProfiles, loadActiveProfileId,
-      loadHouse, saveHouse, clearHouse,
-      normalizeState, formatWhen
-    } from "./assets/app.js";
+    import { loadHouse, saveHouse, clearHouse, formatWhen } from "./assets/app.js";
 
     const dot = document.getElementById("dot");
     const stateLabel = document.getElementById("stateLabel");
-    const ts = document.getElementById("timestamp");
-    const hubChip = document.getElementById("hubChip");
-    const activeChip = document.getElementById("activeChip");
+    const updatedAt = document.getElementById("updatedAt");
+    const mini = document.getElementById("mini");
 
-    function labelFor(state){
-      if (state === "GREEN") return "VERDE";
-      if (state === "YELLOW") return "AMARELO";
-      if (state === "RED") return "VERMELHO";
-      return "INDEFINIDO";
+    function paint(state){
+      dot.classList.remove("green","yellow","red");
+      if (state === "GREEN") { dot.classList.add("green"); stateLabel.textContent = "VERDE"; }
+      else if (state === "YELLOW") { dot.classList.add("yellow"); stateLabel.textContent = "AMARELO"; }
+      else if (state === "RED") { dot.classList.add("red"); stateLabel.textContent = "VERMELHO"; }
+      else { dot.classList.add("yellow"); stateLabel.textContent = "EM BREVE"; }
     }
 
-    function applyBodyState(state){
-      document.body.classList.remove("state-GREEN","state-YELLOW","state-RED");
-      if (state) document.body.classList.add("state-"+state);
-      dot.className = "dot " + (state === "GREEN" ? "G" : state === "YELLOW" ? "Y" : state === "RED" ? "R" : "");
+    function refresh(){
+      const h = loadHouse();
+      if (!h){
+        paint(null);
+        updatedAt.textContent = "—";
+        mini.textContent = "Nada registrado ainda.";
+        return;
+      }
+      paint(h.state);
+      updatedAt.textContent = "Atualizado em: " + formatWhen(h.updatedAt);
+      mini.textContent = "Persistência local ativa.";
     }
 
-    function renderHouse(data){
-      const s = normalizeState(data?.state);
-      applyBodyState(s);
-      stateLabel.textContent = labelFor(s);
-      ts.textContent = data?.updatedAt ? ("Atualizado em: " + formatWhen(data.updatedAt)) : "—";
-    }
+    document.getElementById("g").onclick = ()=>{ saveHouse("GREEN"); refresh(); };
+    document.getElementById("y").onclick = ()=>{ saveHouse("YELLOW"); refresh(); };
+    document.getElementById("r").onclick = ()=>{ saveHouse("RED"); refresh(); };
+    document.getElementById("clear").onclick = ()=>{ clearHouse(); refresh(); };
 
-    function renderHeader(){
-      const hub = loadHub();
-      hubChip.textContent = "Hub: " + (hub.hubName?.trim() || "(não configurado)");
-
-      const profiles = loadProfiles();
-      const activeId = loadActiveProfileId();
-      const active = profiles.find(p => p.id === activeId);
-      activeChip.textContent = "Ativo: " + (active?.name?.trim() || hub.adminName?.trim() || "(ninguém)");
-    }
-
-    function setState(s){
-      const saved = saveHouse(s);
-      renderHouse(saved);
-    }
-
-    // init
-    renderHeader();
-    renderHouse(loadHouse());
-
-    document.getElementById("btnGreen").addEventListener("click", ()=>setState("GREEN"));
-    document.getElementById("btnYellow").addEventListener("click", ()=>setState("YELLOW"));
-    document.getElementById("btnRed").addEventListener("click", ()=>setState("RED"));
-    document.getElementById("btnClear").addEventListener("click", ()=>{ clearHouse(); renderHouse(null); });
-
-    window.addEventListener("keydown",(e)=>{
-      if (e.key === "1") setState("GREEN");
-      if (e.key === "2") setState("YELLOW");
-      if (e.key === "3") setState("RED");
+    window.addEventListener("keydown", (e)=>{
+      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+      if (e.key === "1") { saveHouse("GREEN"); refresh(); }
+      if (e.key === "2") { saveHouse("YELLOW"); refresh(); }
+      if (e.key === "3") { saveHouse("RED"); refresh(); }
     });
+
+    refresh();
   </script>
 </body>
 </html>
