@@ -19,6 +19,7 @@
       </nav>
     </div>
 
+    <!-- Fixos -->
     <section class="card">
       <div class="grid2">
         <div class="field">
@@ -47,11 +48,39 @@
       </div>
 
       <div class="row" style="margin-top:12px">
-        <button class="btn primary" id="save">Salvar</button>
-        <button class="btn" id="setActive">Tornar ativo</button>
+        <button class="btn primary" id="save" type="button">Salvar</button>
+        <button class="btn" id="setActive" type="button">Tornar ativo</button>
       </div>
     </section>
 
+    <!-- Neurotipos -->
+    <h2 style="margin:16px 0 10px">🧠 Neurotipos e Camadas Associadas</h2>
+    <section class="card">
+      <p class="small" style="margin-top:0">
+        Selecione itens do mosaico e registre apenas o necessário: <strong>status</strong>, <strong>desde</strong> e <strong>nota operacional</strong>.
+        (Leituras/explicações por item entram depois.)
+      </p>
+
+      <table class="table" style="margin-top:10px">
+        <thead>
+          <tr>
+            <th>Grupo</th>
+            <th>Item</th>
+            <th>Selecionado</th>
+            <th>Status</th>
+            <th>Desde</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody id="neuroRows"></tbody>
+      </table>
+
+      <p class="hint">
+        “Base” pode existir sozinho e organiza o funcionamento global. “Camadas” modulam. “Combinações” descrevem estruturas como 2e.
+      </p>
+    </section>
+
+    <!-- Alergias -->
     <h2 style="margin:16px 0 10px">Alergias (semipermanentes)</h2>
     <section class="card">
       <div class="row">
@@ -63,7 +92,7 @@
           <label for="allergyNotes">Notas (opcional)</label>
           <input id="allergyNotes" placeholder="Ex.: reação grave em transfusão..." />
         </div>
-        <button class="btn primary" id="addAllergy">Adicionar</button>
+        <button class="btn primary" id="addAllergy" type="button">Adicionar</button>
       </div>
 
       <table class="table" style="margin-top:12px">
@@ -103,44 +132,193 @@
     const allergyNotes = document.getElementById("allergyNotes");
     const allergyRows = document.getElementById("allergyRows");
 
+    // Neuro UI
+    const neuroRows = document.getElementById("neuroRows");
+
     let current = null;
 
-    function loadCurrent(){
-      const list = loadProfiles();
-      current = id ? list.find(p => p.id === id) : null;
+    // ---------- Neuro taxonomia v1 ----------
+    const NEURO_BASE = [
+      { key: "autismo", label: "Autismo (TEA)" },
+      { key: "tdah", label: "TDAH" },
+      { key: "superdotacao", label: "Superdotação / Altas Habilidades" },
+      { key: "afantasia", label: "Afantasia" },
+      { key: "tourette", label: "Tourette" }
+    ];
 
-      if (!current){
-        current = {
-          id: uid("p"),
-          name: "",
-          birthDate: "",
-          role: "membro",
-          allergies: [],
-          notes: "",
-          createdAt: nowIso(),
-          updatedAt: nowIso()
+    const NEURO_LAYERS = [
+      { key: "dislexia", label: "Dislexia", group: "Aprendizagem" },
+      { key: "discalculia", label: "Discalculia", group: "Aprendizagem" },
+      { key: "disgrafia", label: "Disgrafia", group: "Aprendizagem" },
+      { key: "hiperlexia", label: "Hiperlexia", group: "Aprendizagem" },
+
+      { key: "tpac", label: "TPAC / DPAC", group: "Processamento e execução" },
+      { key: "dispraxia", label: "Dispraxia (Transtorno do Desenvolvimento da Coordenação)", group: "Processamento e execução" },
+
+      { key: "toc", label: "TOC", group: "Emoção e regulação" },
+      { key: "ansiedade", label: "Transtornos de Ansiedade", group: "Emoção e regulação" }
+    ];
+
+    const NEURO_COMBINATIONS = [
+      { key: "2e_autismo_superdotacao", label: "Dupla excepcionalidade (Autismo + Superdotação)" },
+      { key: "2e_tdah_superdotacao", label: "Dupla excepcionalidade (TDAH + Superdotação)" },
+      { key: "2e_autismo_tdah", label: "Dupla excepcionalidade (Autismo + TDAH)" },
+      { key: "2e_outra", label: "Dupla excepcionalidade (Outra combinação)" }
+    ];
+
+    const STATUS_OPTIONS = [
+      { value: "confirmado", label: "confirmado" },
+      { value: "hipotese", label: "hipótese" },
+      { value: "traco", label: "traço" },
+      { value: "historico", label: "histórico" }
+    ];
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+    function escapeAttr(str){
+      return String(str || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function ensureNeuroShape(){
+      current.neuro = current.neuro || { base: [], layers: [], combinations: [] };
+      current.neuro.base = Array.isArray(current.neuro.base) ? current.neuro.base : [];
+      current.neuro.layers = Array.isArray(current.neuro.layers) ? current.neuro.layers : [];
+      current.neuro.combinations = Array.isArray(current.neuro.combinations) ? current.neuro.combinations : [];
+    }
+
+    function getNeuroList(category){
+      if (category === "base") return current.neuro.base;
+      if (category === "layers") return current.neuro.layers;
+      return current.neuro.combinations;
+    }
+
+    function findNeuro(category, key){
+      return getNeuroList(category).find(x => x.key === key) || null;
+    }
+
+    function setNeuroChecked(category, item, checked){
+      const list = getNeuroList(category);
+      const exists = findNeuro(category, item.key);
+
+      if (checked && !exists){
+        const payload = {
+          key: item.key,
+          label: item.label,
+          status: "hipotese",
+          since: "",
+          notes: ""
         };
-        title.textContent = "Novo perfil";
-      } else {
-        title.textContent = "Editar perfil";
+        if (category === "layers") payload.group = item.group || "";
+        list.push(payload);
       }
 
-      name.value = current.name || "";
-      birthDate.value = current.birthDate || "";
-      role.value = current.role || "membro";
-      notes.value = current.notes || "";
-      renderAllergies();
+      if (!checked && exists){
+        const next = list.filter(x => x.key !== item.key);
+        if (category === "base") current.neuro.base = next;
+        else if (category === "layers") current.neuro.layers = next;
+        else current.neuro.combinations = next;
+      }
     }
 
-    function persist(){
-      current.name = name.value.trim();
-      current.birthDate = birthDate.value;
-      current.role = role.value;
-      current.notes = notes.value.trim();
-      current = upsertProfile(current);
-      return current;
+    function updateNeuroField(category, key, patch){
+      const obj = findNeuro(category, key);
+      if (!obj) return;
+      Object.assign(obj, patch);
     }
 
+    function statusSelectHtml(selected){
+      return STATUS_OPTIONS.map(o =>
+        `<option value="${o.value}" ${o.value === selected ? "selected" : ""}>${o.label}</option>`
+      ).join("");
+    }
+
+    function renderNeuro(){
+      ensureNeuroShape();
+      neuroRows.innerHTML = "";
+
+      const allRows = [
+        ...NEURO_BASE.map(i => ({ category:"base", group:"Base", ...i })),
+        ...NEURO_LAYERS.map(i => ({ category:"layers", group:i.group, ...i })),
+        ...NEURO_COMBINATIONS.map(i => ({ category:"combinations", group:"Combinações", ...i }))
+      ];
+
+      for (const item of allRows){
+        const obj = findNeuro(item.category, item.key);
+        const checked = !!obj;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(item.group || "")}</td>
+          <td>${escapeHtml(item.label || "")}</td>
+          <td>
+            <input type="checkbox" data-nchk="${item.category}:${item.key}" ${checked ? "checked" : ""} />
+          </td>
+          <td>
+            <select data-nstatus="${item.category}:${item.key}" ${checked ? "" : "disabled"}>
+              ${statusSelectHtml(obj?.status || "hipotese")}
+            </select>
+          </td>
+          <td>
+            <input type="date" data-nsince="${item.category}:${item.key}" value="${escapeAttr(obj?.since || "")}" ${checked ? "" : "disabled"} />
+          </td>
+          <td>
+            <input type="text" data-nnotes="${item.category}:${item.key}" value="${escapeAttr(obj?.notes || "")}" placeholder="nota operacional" ${checked ? "" : "disabled"} />
+          </td>
+        `;
+        neuroRows.appendChild(tr);
+      }
+
+      neuroRows.querySelectorAll("[data-nchk]").forEach(el=>{
+        el.addEventListener("change", ()=>{
+          const [category, key] = el.getAttribute("data-nchk").split(":");
+          const item =
+            category === "base" ? NEURO_BASE.find(x=>x.key===key)
+            : category === "layers" ? NEURO_LAYERS.find(x=>x.key===key)
+            : NEURO_COMBINATIONS.find(x=>x.key===key);
+
+          setNeuroChecked(category, item, el.checked);
+          persist();
+          renderNeuro();
+        });
+      });
+
+      neuroRows.querySelectorAll("[data-nstatus]").forEach(el=>{
+        el.addEventListener("change", ()=>{
+          const [category, key] = el.getAttribute("data-nstatus").split(":");
+          updateNeuroField(category, key, { status: el.value });
+          persist();
+        });
+      });
+
+      neuroRows.querySelectorAll("[data-nsince]").forEach(el=>{
+        el.addEventListener("change", ()=>{
+          const [category, key] = el.getAttribute("data-nsince").split(":");
+          updateNeuroField(category, key, { since: el.value });
+          persist();
+        });
+      });
+
+      neuroRows.querySelectorAll("[data-nnotes]").forEach(el=>{
+        el.addEventListener("input", ()=>{
+          const [category, key] = el.getAttribute("data-nnotes").split(":");
+          updateNeuroField(category, key, { notes: el.value });
+          persist();
+        });
+      });
+    }
+
+    // ---------- Alergias ----------
     function renderAllergies(){
       allergyRows.innerHTML = "";
       const list = current.allergies || [];
@@ -187,15 +365,56 @@
       });
     }
 
-    function escapeHtml(str){
-      return String(str)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+    // ---------- Load / Persist ----------
+    function loadCurrent(){
+      const list = loadProfiles();
+      current = id ? list.find(p => p.id === id) : null;
+
+      if (!current){
+        current = {
+          id: uid("p"),
+          name: "",
+          birthDate: "",
+          role: "membro",
+          neuro: { base: [], layers: [], combinations: [] },
+          allergies: [],
+          notes: "",
+          createdAt: nowIso(),
+          updatedAt: nowIso()
+        };
+        title.textContent = "Novo perfil";
+      } else {
+        title.textContent = "Editar perfil";
+      }
+
+      // ensure shape
+      current.allergies = Array.isArray(current.allergies) ? current.allergies : [];
+      ensureNeuroShape();
+
+      // fill fields
+      name.value = current.name || "";
+      birthDate.value = current.birthDate || "";
+      role.value = current.role || "membro";
+      notes.value = current.notes || "";
+
+      renderNeuro();
+      renderAllergies();
     }
 
+    function persist(){
+      current.name = name.value.trim();
+      current.birthDate = birthDate.value;
+      current.role = role.value;
+      current.notes = notes.value.trim();
+
+      ensureNeuroShape();
+      current.allergies = Array.isArray(current.allergies) ? current.allergies : [];
+
+      current = upsertProfile(current);
+      return current;
+    }
+
+    // ---------- Buttons ----------
     document.getElementById("save").addEventListener("click", ()=>{
       persist();
       alert("Perfil salvo.");
@@ -231,5 +450,3 @@
   </script>
 </body>
 </html>
-
-
