@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Novo evento · NeuroNexus</title>
+  <link rel="stylesheet" href="../assets/app.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Novo evento</h1>
+        <p>Evento temporal com timestamp. Pode ser do HUB ou de um MEMBRO.</p>
+      </div>
+      <nav class="nav">
+        <a class="btn" href="./index.html">⬅ Voltar</a>
+        <a class="btn" href="../index.html">🏠 Home</a>
+      </nav>
+    </div>
+
+    <section class="card">
+      <div class="grid2">
+        <div class="field">
+          <label for="scope">Escopo</label>
+          <select id="scope">
+            <option value="hub">HUB (casa)</option>
+            <option value="profile">MEMBRO</option>
+          </select>
+        </div>
+
+        <div class="field" id="profileField" style="display:none">
+          <label for="profileId">Membro</label>
+          <select id="profileId"></select>
+        </div>
+
+        <div class="field">
+          <label for="type">Tipo</label>
+          <select id="type">
+            <option value="crise">crise</option>
+            <option value="sono">sono</option>
+            <option value="escola">escola</option>
+            <option value="saude">saúde</option>
+            <option value="rotina">rotina</option>
+            <option value="outro">outro</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="context">Contexto</label>
+          <select id="context">
+            <option value="casa">casa</option>
+            <option value="escola">escola</option>
+            <option value="saude">saúde</option>
+            <option value="emergencia">emergência</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="startedAt">Início</label>
+          <input id="startedAt" type="datetime-local" />
+        </div>
+
+        <div class="field">
+          <label for="endedAt">Fim (opcional)</label>
+          <input id="endedAt" type="datetime-local" />
+        </div>
+
+        <div class="field">
+          <label for="severity">Intensidade (opcional)</label>
+          <select id="severity">
+            <option value="">—</option>
+            <option value="leve">leve</option>
+            <option value="moderado">moderado</option>
+            <option value="intenso">intenso</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="notes">Notas observáveis</label>
+          <input id="notes" placeholder="Ex.: chorou, tampou ouvidos, pediu silêncio..." />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="save">Salvar evento</button>
+        <span class="small">Sem backend. Registro local.</span>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { loadProfiles, loadActiveProfileId, addEvent } from "../assets/app.js";
+
+    const scope = document.getElementById("scope");
+    const profileField = document.getElementById("profileField");
+    const profileId = document.getElementById("profileId");
+
+    const startedAt = document.getElementById("startedAt");
+    const endedAt = document.getElementById("endedAt");
+
+    // preencher membros
+    const profiles = loadProfiles();
+    const active = loadActiveProfileId();
+    profileId.innerHTML = profiles.map(p =>
+      `<option value="${p.id}" ${p.id === active ? "selected" : ""}>${escapeHtml(p.name || "(sem nome)")}</option>`
+    ).join("");
+
+    function toLocalInputValue(date){
+      const pad = (n) => String(n).padStart(2,"0");
+      const d = date;
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    // defaults
+    startedAt.value = toLocalInputValue(new Date());
+
+    function syncScopeUI(){
+      const isProfile = scope.value === "profile";
+      profileField.style.display = isProfile ? "block" : "none";
+    }
+    scope.addEventListener("change", syncScopeUI);
+    syncScopeUI();
+
+    document.getElementById("save").addEventListener("click", ()=>{
+      const ev = {
+        scope: scope.value,
+        profileId: scope.value === "profile" ? (profileId.value || "") : "",
+        type: document.getElementById("type").value,
+        context: document.getElementById("context").value,
+        startedAt: startedAt.value ? new Date(startedAt.value).toISOString() : new Date().toISOString(),
+        endedAt: endedAt.value ? new Date(endedAt.value).toISOString() : "",
+        severity: document.getElementById("severity").value,
+        notes: document.getElementById("notes").value.trim()
+      };
+
+      if (ev.scope === "profile" && !ev.profileId){
+        alert("Selecione um membro.");
+        return;
+      }
+
+      addEvent(ev);
+      alert("Evento salvo.");
+      location.href = "./index.html";
+    });
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+  </script>
+</body>
+</html>
