@@ -1,1 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Editar perfil · NeuroNexus</title>
+  <link rel="stylesheet" href="../assets/app.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1 id="title">Novo perfil</h1>
+        <p>Dados fixos + semipermanentes. Eventos ficam no histórico (timestamp).</p>
+      </div>
+      <nav class="nav">
+        <a class="btn" href="./index.html">⬅ Voltar</a>
+        <a class="btn" href="../index.html">🏠 Home</a>
+      </nav>
+    </div>
+
+    <section class="card">
+      <div class="grid2">
+        <div class="field">
+          <label for="name">Nome</label>
+          <input id="name" placeholder="Ex.: Leon Caleb" />
+        </div>
+        <div class="field">
+          <label for="birthDate">Data de nascimento</label>
+          <input id="birthDate" type="date" />
+        </div>
+        <div class="field">
+          <label for="role">Papel</label>
+          <select id="role">
+            <option value="membro">membro</option>
+            <option value="criança">criança</option>
+            <option value="responsável">responsável</option>
+            <option value="cuidador">cuidador</option>
+            <option value="parceiro-escola">parceiro-escola</option>
+            <option value="profissional-saude">profissional-saude</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="notes">Notas operacionais</label>
+          <input id="notes" placeholder="Ex.: comunicação preferida, sinais de sobrecarga..." />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="save">Salvar</button>
+        <button class="btn" id="setActive">Tornar ativo</button>
+      </div>
+    </section>
+
+    <h2 style="margin:16px 0 10px">Alergias (semipermanentes)</h2>
+    <section class="card">
+      <div class="row">
+        <div class="field" style="flex:1; min-width:240px">
+          <label for="allergyLabel">Nova alergia</label>
+          <input id="allergyLabel" placeholder="Ex.: sangue, dipirona, amendoim..." />
+        </div>
+        <div class="field" style="flex:1; min-width:240px">
+          <label for="allergyNotes">Notas (opcional)</label>
+          <input id="allergyNotes" placeholder="Ex.: reação grave em transfusão..." />
+        </div>
+        <button class="btn primary" id="addAllergy">Adicionar</button>
+      </div>
+
+      <table class="table" style="margin-top:12px">
+        <thead>
+          <tr>
+            <th>Ativo</th>
+            <th>Item</th>
+            <th>Desde</th>
+            <th>Notas</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="allergyRows"></tbody>
+      </table>
+
+      <p class="hint">Nada some: pode ficar inativo se deixar de ser relevante.</p>
+    </section>
+  </main>
+
+  <script type="module">
+    import {
+      uid, nowIso,
+      loadProfiles, upsertProfile,
+      loadActiveProfileId, setActiveProfileId
+    } from "../assets/app.js";
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+
+    const title = document.getElementById("title");
+    const name = document.getElementById("name");
+    const birthDate = document.getElementById("birthDate");
+    const role = document.getElementById("role");
+    const notes = document.getElementById("notes");
+
+    const allergyLabel = document.getElementById("allergyLabel");
+    const allergyNotes = document.getElementById("allergyNotes");
+    const allergyRows = document.getElementById("allergyRows");
+
+    let current = null;
+
+    function loadCurrent(){
+      const list = loadProfiles();
+      current = id ? list.find(p => p.id === id) : null;
+
+      if (!current){
+        current = {
+          id: uid("p"),
+          name: "",
+          birthDate: "",
+          role: "membro",
+          allergies: [],
+          notes: "",
+          createdAt: nowIso(),
+          updatedAt: nowIso()
+        };
+        title.textContent = "Novo perfil";
+      } else {
+        title.textContent = "Editar perfil";
+      }
+
+      name.value = current.name || "";
+      birthDate.value = current.birthDate || "";
+      role.value = current.role || "membro";
+      notes.value = current.notes || "";
+      renderAllergies();
+    }
+
+    function persist(){
+      current.name = name.value.trim();
+      current.birthDate = birthDate.value;
+      current.role = role.value;
+      current.notes = notes.value.trim();
+      current = upsertProfile(current);
+      return current;
+    }
+
+    function renderAllergies(){
+      allergyRows.innerHTML = "";
+      const list = current.allergies || [];
+
+      if (!list.length){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="5">Nenhuma alergia cadastrada.</td>`;
+        allergyRows.appendChild(tr);
+        return;
+      }
+
+      for (const a of list){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><button class="btn ${a.active ? "primary" : ""}" data-toggle="${a.id}">${a.active ? "Ativa" : "Inativa"}</button></td>
+          <td>${escapeHtml(a.label || "")}</td>
+          <td>${escapeHtml((a.startedAt || "").slice(0,10) || "—")}</td>
+          <td>${escapeHtml(a.notes || "")}</td>
+          <td><button class="btn danger" data-del="${a.id}">Remover</button></td>
+        `;
+        allergyRows.appendChild(tr);
+      }
+
+      allergyRows.querySelectorAll("[data-toggle]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const aid = btn.getAttribute("data-toggle");
+          const a = current.allergies.find(x => x.id === aid);
+          if (!a) return;
+          a.active = !a.active;
+          persist();
+          renderAllergies();
+        });
+      });
+
+      allergyRows.querySelectorAll("[data-del]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const aid = btn.getAttribute("data-del");
+          const ok = confirm("Remover este item?");
+          if (!ok) return;
+          current.allergies = current.allergies.filter(x => x.id !== aid);
+          persist();
+          renderAllergies();
+        });
+      });
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    document.getElementById("save").addEventListener("click", ()=>{
+      persist();
+      alert("Perfil salvo.");
+      history.replaceState(null, "", "./edit.html?id=" + encodeURIComponent(current.id));
+    });
+
+    document.getElementById("setActive").addEventListener("click", ()=>{
+      persist();
+      setActiveProfileId(current.id);
+      alert("Perfil ativo definido.");
+    });
+
+    document.getElementById("addAllergy").addEventListener("click", ()=>{
+      const label = allergyLabel.value.trim();
+      if (!label) return alert("Digite o nome da alergia.");
+      const item = {
+        id: uid("a"),
+        label,
+        notes: allergyNotes.value.trim(),
+        startedAt: nowIso(),
+        active: true
+      };
+      current.allergies = current.allergies || [];
+      current.allergies.unshift(item);
+
+      allergyLabel.value = "";
+      allergyNotes.value = "";
+      persist();
+      renderAllergies();
+    });
+
+    loadCurrent();
+  </script>
+</body>
+</html>
+
 
