@@ -4,19 +4,38 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Editar perfil · NeuroNexus</title>
+
+  <!-- Fontes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="../assets/app.css" />
 </head>
 <body>
   <main class="wrap">
+    <header class="header">
+      <div class="brandline">
+        <div class="logo">
+          <img src="../assets/logo.png" alt="Logo NeuroNexus" />
+        </div>
+        <div class="brandtext">
+          <h1>NEURONEXUS</h1>
+          <p>Perfis do Clã · dados fixos, semipermanentes e histórico</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="btn" href="./index.html">👥 Perfis</a>
+        <a class="btn" href="../index.html">🏠 Estado da Casa</a>
+      </nav>
+    </header>
+
     <div class="topbar">
       <div class="brand">
         <h1 id="title">Novo perfil</h1>
         <p>Dados fixos + semipermanentes. Eventos ficam no histórico (timestamp).</p>
       </div>
-      <nav class="nav">
-        <a class="btn" href="./index.html">⬅ Voltar</a>
-        <a class="btn" href="../index.html">🏠 Home</a>
-      </nav>
     </div>
 
     <!-- Fixos -->
@@ -132,12 +151,10 @@
     const allergyNotes = document.getElementById("allergyNotes");
     const allergyRows = document.getElementById("allergyRows");
 
-    // Neuro UI
     const neuroRows = document.getElementById("neuroRows");
 
     let current = null;
 
-    // ---------- Neuro taxonomia v1 ----------
     const NEURO_BASE = [
       { key: "autismo", label: "Autismo (TEA)" },
       { key: "tdah", label: "TDAH" },
@@ -151,10 +168,8 @@
       { key: "discalculia", label: "Discalculia", group: "Aprendizagem" },
       { key: "disgrafia", label: "Disgrafia", group: "Aprendizagem" },
       { key: "hiperlexia", label: "Hiperlexia", group: "Aprendizagem" },
-
       { key: "tpac", label: "TPAC / DPAC", group: "Processamento e execução" },
       { key: "dispraxia", label: "Dispraxia (Transtorno do Desenvolvimento da Coordenação)", group: "Processamento e execução" },
-
       { key: "toc", label: "TOC", group: "Emoção e regulação" },
       { key: "ansiedade", label: "Transtornos de Ansiedade", group: "Emoção e regulação" }
     ];
@@ -212,13 +227,7 @@
       const exists = findNeuro(category, item.key);
 
       if (checked && !exists){
-        const payload = {
-          key: item.key,
-          label: item.label,
-          status: "hipotese",
-          since: "",
-          notes: ""
-        };
+        const payload = { key: item.key, label: item.label, status: "hipotese", since: "", notes: "" };
         if (category === "layers") payload.group = item.group || "";
         list.push(payload);
       }
@@ -261,20 +270,10 @@
         tr.innerHTML = `
           <td>${escapeHtml(item.group || "")}</td>
           <td>${escapeHtml(item.label || "")}</td>
-          <td>
-            <input type="checkbox" data-nchk="${item.category}:${item.key}" ${checked ? "checked" : ""} />
-          </td>
-          <td>
-            <select data-nstatus="${item.category}:${item.key}" ${checked ? "" : "disabled"}>
-              ${statusSelectHtml(obj?.status || "hipotese")}
-            </select>
-          </td>
-          <td>
-            <input type="date" data-nsince="${item.category}:${item.key}" value="${escapeAttr(obj?.since || "")}" ${checked ? "" : "disabled"} />
-          </td>
-          <td>
-            <input type="text" data-nnotes="${item.category}:${item.key}" value="${escapeAttr(obj?.notes || "")}" placeholder="nota operacional" ${checked ? "" : "disabled"} />
-          </td>
+          <td><input type="checkbox" data-nchk="${item.category}:${item.key}" ${checked ? "checked" : ""} /></td>
+          <td><select data-nstatus="${item.category}:${item.key}" ${checked ? "" : "disabled"}>${statusSelectHtml(obj?.status || "hipotese")}</select></td>
+          <td><input type="date" data-nsince="${item.category}:${item.key}" value="${escapeAttr(obj?.since || "")}" ${checked ? "" : "disabled"} /></td>
+          <td><input type="text" data-nnotes="${item.category}:${item.key}" value="${escapeAttr(obj?.notes || "")}" placeholder="nota operacional" ${checked ? "" : "disabled"} /></td>
         `;
         neuroRows.appendChild(tr);
       }
@@ -318,7 +317,6 @@
       });
     }
 
-    // ---------- Alergias ----------
     function renderAllergies(){
       allergyRows.innerHTML = "";
       const list = current.allergies || [];
@@ -356,8 +354,7 @@
       allergyRows.querySelectorAll("[data-del]").forEach(btn=>{
         btn.addEventListener("click", ()=>{
           const aid = btn.getAttribute("data-del");
-          const ok = confirm("Remover este item?");
-          if (!ok) return;
+          if (!confirm("Remover este item?")) return;
           current.allergies = current.allergies.filter(x => x.id !== aid);
           persist();
           renderAllergies();
@@ -365,33 +362,20 @@
       });
     }
 
-    // ---------- Load / Persist ----------
     function loadCurrent(){
       const list = loadProfiles();
       current = id ? list.find(p => p.id === id) : null;
 
       if (!current){
-        current = {
-          id: uid("p"),
-          name: "",
-          birthDate: "",
-          role: "membro",
-          neuro: { base: [], layers: [], combinations: [] },
-          allergies: [],
-          notes: "",
-          createdAt: nowIso(),
-          updatedAt: nowIso()
-        };
+        current = { id: uid("p"), name:"", birthDate:"", role:"membro", neuro:{base:[],layers:[],combinations:[]}, allergies:[], notes:"", createdAt: nowIso(), updatedAt: nowIso() };
         title.textContent = "Novo perfil";
       } else {
         title.textContent = "Editar perfil";
       }
 
-      // ensure shape
       current.allergies = Array.isArray(current.allergies) ? current.allergies : [];
       ensureNeuroShape();
 
-      // fill fields
       name.value = current.name || "";
       birthDate.value = current.birthDate || "";
       role.value = current.role || "membro";
@@ -414,7 +398,6 @@
       return current;
     }
 
-    // ---------- Buttons ----------
     document.getElementById("save").addEventListener("click", ()=>{
       persist();
       alert("Perfil salvo.");
@@ -430,16 +413,8 @@
     document.getElementById("addAllergy").addEventListener("click", ()=>{
       const label = allergyLabel.value.trim();
       if (!label) return alert("Digite o nome da alergia.");
-      const item = {
-        id: uid("a"),
-        label,
-        notes: allergyNotes.value.trim(),
-        startedAt: nowIso(),
-        active: true
-      };
-      current.allergies = current.allergies || [];
+      const item = { id: uid("a"), label, notes: allergyNotes.value.trim(), startedAt: nowIso(), active: true };
       current.allergies.unshift(item);
-
       allergyLabel.value = "";
       allergyNotes.value = "";
       persist();
