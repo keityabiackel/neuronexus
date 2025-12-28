@@ -2,11 +2,289 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>NeuroNexus</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NeuroNexus Hub</title>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: rgba(0,0,0,.65);
+      --card: rgba(0,0,0,.04);
+      --border: rgba(0,0,0,.12);
+      --shadow: 0 10px 30px rgba(0,0,0,.10);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      transition: background-color 250ms ease;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 880px;
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 36px;
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0 0 18px 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin: 16px 0 18px;
+      padding: 14px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.18);
+      background: #d9d9d9;
+      box-shadow: 0 2px 8px rgba(0,0,0,.10) inset;
+    }
+
+    .when {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+    }
+
+    button:active { transform: translateY(1px); }
+    button:focus { outline: 3px solid rgba(0,0,0,.18); outline-offset: 2px; }
+
+    .btn-green { border-color: rgba(0, 128, 0, .35); }
+    .btn-yellow { border-color: rgba(180, 140, 0, .45); }
+    .btn-red { border-color: rgba(160, 0, 0, .35); }
+
+    .hint {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .ghost {
+      background: transparent;
+      box-shadow: none;
+      border-style: dashed;
+      font-weight: 700;
+      padding: 12px 14px;
+      border-radius: 14px;
+    }
+
+    /* fundos por estado */
+    body[data-state="GREEN"] { background: #e9f8ee; }
+    body[data-state="YELLOW"] { background: #fff7da; }
+    body[data-state="RED"] { background: #ffe3e3; }
+
+    /* bolinha por estado */
+    .dot[data-state="GREEN"] { background: #3cb371; }
+    .dot[data-state="YELLOW"] { background: #f1c232; }
+    .dot[data-state="RED"] { background: #e06666; }
+
+    @media (max-width: 680px) {
+      header h1 { font-size: 30px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-<body>
-  <h1>NeuroNexus Hub</h1>
-  <p>Aplicação em desenvolvimento.</p>
-  <p>Estado da Casa: <strong>EM BREVE</strong></p>
+
+<body data-state="NONE">
+  <main class="wrap">
+    <header>
+      <h1>NeuroNexus Hub</h1>
+      <p>
+        MVP Fase 0 — um indicador compartilhado, simples e acionável do estado do ambiente doméstico.
+        Menos interpretação; mais dados observáveis.
+      </p>
+    </header>
+
+    <section class="status-row" aria-label="Estado atual da casa">
+      <div class="pill">
+        <span class="dot" id="dot" aria-hidden="true"></span>
+        <span>Estado da Casa:</span>
+        <span id="stateLabel">INDEFINIDO</span>
+      </div>
+      <div class="when" id="timestamp">—</div>
+    </section>
+
+    <section class="grid" aria-label="Controles de estado">
+      <button class="btn-green" id="btnGreen" type="button">🟢 VERDE</button>
+      <button class="btn-yellow" id="btnYellow" type="button">🟡 AMARELO</button>
+      <button class="btn-red" id="btnRed" type="button">🔴 VERMELHO</button>
+    </section>
+
+    <p class="hint">
+      Atalhos do teclado: <strong>1</strong> (Verde), <strong>2</strong> (Amarelo), <strong>3</strong> (Vermelho).<br>
+      Este MVP salva o estado apenas no seu navegador (LocalStorage). Nada é enviado para lugar nenhum.
+    </p>
+
+    <div class="footer">
+      <button class="ghost" id="btnClear" type="button">Limpar estado</button>
+      <span class="small">NeuroNexus · client-side · sem backend</span>
+    </div>
+  </main>
+
+  <script>
+    // NeuroNexus — Phase 0: House State (B)
+    // Persistência local (LocalStorage). Nenhuma transmissão de dados.
+    const STORAGE_KEY = "neuronexus.houseState.v1";
+
+    const stateLabel = document.getElementById("stateLabel");
+    const timestampEl = document.getElementById("timestamp");
+    const dot = document.getElementById("dot");
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function formatWhen(isoString) {
+      try {
+        const d = new Date(isoString);
+        // formato curto e humano
+        return "Atualizado em: " + d.toLocaleString();
+      } catch {
+        return "Atualizado";
+      }
+    }
+
+    function readState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.state) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    function writeState(state) {
+      const payload = { state, updatedAt: nowIso() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      return payload;
+    }
+
+    function clearState() {
+      localStorage.removeItem(STORAGE_KEY);
+      render(null);
+    }
+
+    function normalizeState(state) {
+      const s = String(state || "").toUpperCase();
+      if (s === "GREEN" || s === "YELLOW" || s === "RED") return s;
+      return null;
+    }
+
+    function labelFor(state) {
+      if (state === "GREEN") return "VERDE";
+      if (state === "YELLOW") return "AMARELO";
+      if (state === "RED") return "VERMELHO";
+      return "INDEFINIDO";
+    }
+
+    function render(data) {
+      const state = normalizeState(data?.state);
+      document.body.dataset.state = state || "NONE";
+      dot.dataset.state = state || "NONE";
+
+      stateLabel.textContent = labelFor(state);
+      timestampEl.textContent = data?.updatedAt ? formatWhen(data.updatedAt) : "—";
+    }
+
+    function setState(state) {
+      const normalized = normalizeState(state);
+      if (!normalized) return;
+      const saved = writeState(normalized);
+      render(saved);
+    }
+
+    // Botões
+    document.getElementById("btnGreen").addEventListener("click", () => setState("GREEN"));
+    document.getElementById("btnYellow").addEventListener("click", () => setState("YELLOW"));
+    document.getElementById("btnRed").addEventListener("click", () => setState("RED"));
+    document.getElementById("btnClear").addEventListener("click", clearState);
+
+    // Atalhos
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "1") setState("GREEN");
+      if (e.key === "2") setState("YELLOW");
+      if (e.key === "3") setState("RED");
+    });
+
+    // Inicialização
+    render(readState());
+  </script>
 </body>
 </html>
