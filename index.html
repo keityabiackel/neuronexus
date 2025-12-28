@@ -4,705 +4,111 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NeuroNexus Hub</title>
-
-  <style>
-    :root{
-      --bg:#ffffff; --fg:#111; --muted:rgba(0,0,0,.65);
-      --card:rgba(0,0,0,.04); --border:rgba(0,0,0,.12);
-      --shadow:0 10px 30px rgba(0,0,0,.10);
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial,sans-serif;
-      background:var(--bg); color:var(--fg); min-height:100vh;
-      display:grid; place-items:center; padding:24px; transition:background-color 250ms ease;
-    }
-    body[data-state="GREEN"]{background:#e9f8ee}
-    body[data-state="YELLOW"]{background:#fff7da}
-    body[data-state="RED"]{background:#ffe3e3}
-
-    .wrap{
-      width:100%; max-width:920px;
-      background:rgba(255,255,255,.75); backdrop-filter:blur(6px);
-      border:1px solid var(--border); border-radius:18px;
-      box-shadow:var(--shadow); padding:22px;
-    }
-
-    /* Top bar */
-    .topbar{
-      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
-      margin-bottom:14px;
-    }
-    .brand h1{margin:0 0 6px; font-size:34px; letter-spacing:-0.02em;}
-    .brand p{margin:0; color:var(--muted); line-height:1.45}
-    .actions{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
-    }
-    .chip{
-      border:1px solid var(--border);
-      background:#fff; border-radius:999px;
-      padding:8px 12px; font-weight:700; font-size:13px;
-      box-shadow:0 6px 16px rgba(0,0,0,.06);
-      max-width:320px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-
-    .iconbtn{
-      appearance:none; border:1px solid var(--border);
-      background:#fff; border-radius:14px; padding:10px 12px;
-      cursor:pointer; font-weight:800; letter-spacing:.02em;
-      box-shadow:0 6px 16px rgba(0,0,0,.08);
-      transition:transform 120ms ease;
-    }
-    .iconbtn:active{transform:translateY(1px)}
-    .iconbtn:focus{outline:3px solid rgba(0,0,0,.18); outline-offset:2px}
-
-    /* House state card */
-    .status-row{
-      display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
-      margin:14px 0 14px; padding:14px 16px;
-      background:var(--card); border:1px solid var(--border); border-radius:14px;
-    }
-    .pill{display:inline-flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.02em;}
-    .dot{
-      width:14px; height:14px; border-radius:999px;
-      border:1px solid rgba(0,0,0,.18); background:#d9d9d9;
-      box-shadow:0 2px 8px rgba(0,0,0,.10) inset;
-    }
-    .dot[data-state="GREEN"]{background:#3cb371}
-    .dot[data-state="YELLOW"]{background:#f1c232}
-    .dot[data-state="RED"]{background:#e06666}
-    .when{font-size:14px; color:var(--muted)}
-
-    .grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
-    button.statebtn{
-      appearance:none; border:1px solid var(--border); background:#fff;
-      border-radius:16px; padding:16px 14px; cursor:pointer;
-      font-weight:900; font-size:16px; letter-spacing:.02em;
-      transition:transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-      box-shadow:0 6px 16px rgba(0,0,0,.08);
-    }
-    button.statebtn:active{transform:translateY(1px)}
-    button.statebtn:focus{outline:3px solid rgba(0,0,0,.18); outline-offset:2px}
-    .btn-green{border-color:rgba(0,128,0,.35)}
-    .btn-yellow{border-color:rgba(180,140,0,.45)}
-    .btn-red{border-color:rgba(160,0,0,.35)}
-
-    .hint{margin-top:14px; color:var(--muted); font-size:14px; line-height:1.5}
-    .footer{margin-top:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between}
-    .small{font-size:13px; color:var(--muted)}
-    .ghost{
-      background:transparent; box-shadow:none; border-style:dashed;
-      font-weight:800; padding:12px 14px; border-radius:14px; cursor:pointer;
-    }
-
-    /* Modal */
-    .overlay{
-      position:fixed; inset:0; background:rgba(0,0,0,.35);
-      display:none; align-items:center; justify-content:center;
-      padding:18px;
-    }
-    .overlay.show{display:flex}
-    .modal{
-      width:100%; max-width:860px;
-      background:#fff; border:1px solid var(--border);
-      border-radius:18px; box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-    .modalhead{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:14px 16px; border-bottom:1px solid var(--border);
-      background:rgba(0,0,0,.02);
-    }
-    .modalhead strong{font-size:16px}
-    .closebtn{
-      appearance:none; border:1px solid var(--border); background:#fff;
-      border-radius:12px; padding:8px 10px; cursor:pointer; font-weight:900;
-    }
-    .modalbody{padding:16px}
-    .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
-    .tab{
-      appearance:none; border:1px solid var(--border); background:#fff;
-      border-radius:999px; padding:8px 12px; cursor:pointer; font-weight:900; font-size:13px;
-    }
-    .tab.active{background:rgba(0,0,0,.06)}
-    .panel{display:none}
-    .panel.show{display:block}
-
-    .formgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-    .field{display:flex; flex-direction:column; gap:6px}
-    label{font-size:13px; color:var(--muted); font-weight:800}
-    input, select, textarea{
-      border:1px solid var(--border); border-radius:12px;
-      padding:10px 12px; font-size:14px; background:#fff;
-    }
-    textarea{min-height:92px; resize:vertical}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .primary{
-      appearance:none; border:1px solid var(--border);
-      background:#111; color:#fff; border-radius:14px;
-      padding:10px 12px; cursor:pointer; font-weight:900;
-    }
-    .danger{
-      appearance:none; border:1px solid rgba(160,0,0,.35);
-      background:#fff; color:#8a0000; border-radius:14px;
-      padding:10px 12px; cursor:pointer; font-weight:900;
-    }
-    .muted{color:var(--muted); font-size:13px; line-height:1.45}
-
-    .members{
-      display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;
-      margin-top:12px;
-    }
-    .membercard{
-      border:1px solid var(--border); border-radius:16px;
-      padding:12px; background:rgba(0,0,0,.02);
-      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
-    }
-    .membercard strong{display:block; font-size:15px}
-    .membermeta{color:var(--muted); font-size:13px; margin-top:4px}
-    .cardactions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
-    .mini{
-      appearance:none; border:1px solid var(--border);
-      background:#fff; border-radius:12px; padding:8px 10px;
-      cursor:pointer; font-weight:900; font-size:13px;
-    }
-    .mini.active{background:rgba(0,0,0,.06)}
-    @media (max-width:720px){
-      .brand h1{font-size:28px}
-      .grid{grid-template-columns:1fr}
-      .formgrid{grid-template-columns:1fr}
-      .members{grid-template-columns:1fr}
-    }
-  </style>
+  <link rel="stylesheet" href="./assets/app.css" />
 </head>
-
-<body data-state="NONE">
+<body>
   <main class="wrap">
     <div class="topbar">
       <div class="brand">
         <h1>NeuroNexus Hub</h1>
-        <p>MVP Fase 0 — indicador compartilhado do estado do ambiente doméstico. Menos interpretação; mais dados observáveis.</p>
+        <p>MVP Fase 0 — Estado da Casa (B). Menos interpretação; mais dados observáveis.</p>
       </div>
-
-      <div class="actions">
-        <div class="chip" id="hubChip">Hub: (não configurado)</div>
-        <div class="chip" id="activeChip">Ativo: (ninguém)</div>
-        <button class="iconbtn" id="btnProfile" type="button">⚙ Perfil</button>
-      </div>
+      <nav class="nav">
+        <div class="chip" id="hubChip">Hub: —</div>
+        <div class="chip" id="activeChip">Ativo: —</div>
+        <a class="btn" href="./profiles/index.html">👤 Perfis</a>
+        <a class="btn" href="./events/index.html">🧾 Eventos</a>
+      </nav>
     </div>
 
-    <section class="status-row" aria-label="Estado atual da casa">
+    <section class="card row" aria-label="Estado atual da casa">
       <div class="pill">
-        <span class="dot" id="dot" aria-hidden="true"></span>
+        <span class="dot" id="dot"></span>
         <span>Estado da Casa:</span>
         <span id="stateLabel">INDEFINIDO</span>
       </div>
-      <div class="when" id="timestamp">—</div>
+      <div class="small" id="timestamp">—</div>
     </section>
 
-    <section class="grid" aria-label="Controles de estado">
-      <button class="statebtn btn-green" id="btnGreen" type="button">🟢 VERDE</button>
-      <button class="statebtn btn-yellow" id="btnYellow" type="button">🟡 AMARELO</button>
-      <button class="statebtn btn-red" id="btnRed" type="button">🔴 VERMELHO</button>
+    <section class="grid3" aria-label="Controles de estado">
+      <button class="statebtn green" id="btnGreen" type="button">🟢 VERDE</button>
+      <button class="statebtn yellow" id="btnYellow" type="button">🟡 AMARELO</button>
+      <button class="statebtn red" id="btnRed" type="button">🔴 VERMELHO</button>
     </section>
 
     <p class="hint">
-      Atalhos do teclado: <strong>1</strong> (Verde), <strong>2</strong> (Amarelo), <strong>3</strong> (Vermelho).<br>
-      Este MVP salva o estado apenas no seu navegador (LocalStorage). Nada é enviado para lugar nenhum.
+      Atalhos: <strong>1</strong> Verde, <strong>2</strong> Amarelo, <strong>3</strong> Vermelho.
+      <br/>Tudo é salvo localmente (LocalStorage). Nada é enviado.
     </p>
 
-    <div class="footer">
-      <button class="ghost" id="btnClear" type="button">Limpar estado</button>
-      <span class="small">NeuroNexus · client-side · sem backend</span>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" id="btnClear" type="button">Limpar estado</button>
+      <span class="small">client-side · sem backend</span>
     </div>
   </main>
 
-  <!-- Modal Perfil -->
-  <div class="overlay" id="overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Configurações de perfil">
-      <div class="modalhead">
-        <strong>Perfil do Hub</strong>
-        <button class="closebtn" id="btnClose" type="button">✕</button>
-      </div>
+  <script type="module">
+    import {
+      loadHub, loadProfiles, loadActiveProfileId,
+      loadHouse, saveHouse, clearHouse,
+      normalizeState, formatWhen
+    } from "./assets/app.js";
 
-      <div class="modalbody">
-        <div class="tabs" role="tablist">
-          <button class="tab active" data-tab="meu" type="button">Meu perfil</button>
-          <button class="tab" data-tab="familia" type="button">Membros da família</button>
-          <button class="tab" data-tab="prefs" type="button">Preferências</button>
-        </div>
+    const dot = document.getElementById("dot");
+    const stateLabel = document.getElementById("stateLabel");
+    const ts = document.getElementById("timestamp");
+    const hubChip = document.getElementById("hubChip");
+    const activeChip = document.getElementById("activeChip");
 
-        <!-- Meu perfil -->
-        <div class="panel show" id="panel-meu">
-          <div class="formgrid">
-            <div class="field">
-              <label for="hubName">Nome do Hub (casa)</label>
-              <input id="hubName" placeholder="Ex.: Casa da Keity" />
-            </div>
-            <div class="field">
-              <label for="adminName">Nome do(a) administrador(a)</label>
-              <input id="adminName" placeholder="Ex.: Keity" />
-            </div>
-          </div>
-          <div class="field" style="margin-top:12px">
-            <label for="adminNotes">Notas operacionais (opcional)</label>
-            <textarea id="adminNotes" placeholder="Ex.: Preferimos comunicação direta. Evitar mudanças sem aviso."></textarea>
-          </div>
-
-          <div class="row" style="margin-top:12px">
-            <button class="primary" id="btnSaveMe" type="button">Salvar</button>
-            <span class="muted">Sem conta, sem servidor. Tudo fica no seu navegador.</span>
-          </div>
-        </div>
-
-        <!-- Família -->
-        <div class="panel" id="panel-familia">
-          <div class="row" style="justify-content:space-between; width:100%">
-            <div class="muted">
-              Perfis de membros (administrados por você). Selecione um membro como “ativo”.
-            </div>
-            <button class="primary" id="btnAddMember" type="button">+ Adicionar membro</button>
-          </div>
-
-          <div class="members" id="membersList" aria-label="Lista de membros"></div>
-
-          <div class="muted" style="margin-top:10px">
-            Dica: “Ativo” é só para facilitar navegação. O Estado da Casa (B) é do hub inteiro.
-          </div>
-        </div>
-
-        <!-- Prefs -->
-        <div class="panel" id="panel-prefs">
-          <div class="formgrid">
-            <div class="field">
-              <label for="largeText">Texto maior</label>
-              <select id="largeText">
-                <option value="0">Não</option>
-                <option value="1">Sim</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="highContrast">Alto contraste</label>
-              <select id="highContrast">
-                <option value="0">Não</option>
-                <option value="1">Sim</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:12px">
-            <button class="primary" id="btnSavePrefs" type="button">Salvar preferências</button>
-            <button class="danger" id="btnResetAll" type="button">Resetar tudo</button>
-          </div>
-          <p class="muted" style="margin-top:10px">
-            Resetar tudo apaga: perfis + preferências + estado da casa.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // =========================
-    // Storage keys
-    // =========================
-    const STORAGE_HOUSE = "neuronexus.houseState.v1";
-    const STORAGE_PROFILE = "neuronexus.profile.v1";
-    const STORAGE_ACTIVE_MEMBER = "neuronexus.activeMemberId.v1";
-
-    // =========================
-    // Helpers
-    // =========================
-    const $ = (id) => document.getElementById(id);
-    const nowIso = () => new Date().toISOString();
-
-    function safeJsonParse(raw) {
-      try { return JSON.parse(raw); } catch { return null; }
-    }
-
-    // =========================
-    // House State (B)
-    // =========================
-    const stateLabel = $("stateLabel");
-    const timestampEl = $("timestamp");
-    const dot = $("dot");
-
-    function formatWhen(isoString) {
-      try {
-        const d = new Date(isoString);
-        return "Atualizado em: " + d.toLocaleString();
-      } catch {
-        return "Atualizado";
-      }
-    }
-
-    function normalizeState(state) {
-      const s = String(state || "").toUpperCase();
-      if (s === "GREEN" || s === "YELLOW" || s === "RED") return s;
-      return null;
-    }
-
-    function labelFor(state) {
+    function labelFor(state){
       if (state === "GREEN") return "VERDE";
       if (state === "YELLOW") return "AMARELO";
       if (state === "RED") return "VERMELHO";
       return "INDEFINIDO";
     }
 
-    function readHouse() {
-      const raw = localStorage.getItem(STORAGE_HOUSE);
-      if (!raw) return null;
-      const parsed = safeJsonParse(raw);
-      if (!parsed || !parsed.state) return null;
-      return parsed;
+    function applyBodyState(state){
+      document.body.classList.remove("state-GREEN","state-YELLOW","state-RED");
+      if (state) document.body.classList.add("state-"+state);
+      dot.className = "dot " + (state === "GREEN" ? "G" : state === "YELLOW" ? "Y" : state === "RED" ? "R" : "");
     }
 
-    function writeHouse(state) {
-      const payload = { state, updatedAt: nowIso() };
-      localStorage.setItem(STORAGE_HOUSE, JSON.stringify(payload));
-      return payload;
+    function renderHouse(data){
+      const s = normalizeState(data?.state);
+      applyBodyState(s);
+      stateLabel.textContent = labelFor(s);
+      ts.textContent = data?.updatedAt ? ("Atualizado em: " + formatWhen(data.updatedAt)) : "—";
     }
 
-    function renderHouse(data) {
-      const state = normalizeState(data?.state);
-      document.body.dataset.state = state || "NONE";
-      dot.dataset.state = state || "NONE";
-      stateLabel.textContent = labelFor(state);
-      timestampEl.textContent = data?.updatedAt ? formatWhen(data.updatedAt) : "—";
+    function renderHeader(){
+      const hub = loadHub();
+      hubChip.textContent = "Hub: " + (hub.hubName?.trim() || "(não configurado)");
+
+      const profiles = loadProfiles();
+      const activeId = loadActiveProfileId();
+      const active = profiles.find(p => p.id === activeId);
+      activeChip.textContent = "Ativo: " + (active?.name?.trim() || hub.adminName?.trim() || "(ninguém)");
     }
 
-    function setHouseState(state) {
-      const normalized = normalizeState(state);
-      if (!normalized) return;
-      renderHouse(writeHouse(normalized));
+    function setState(s){
+      const saved = saveHouse(s);
+      renderHouse(saved);
     }
 
-    function clearHouse() {
-      localStorage.removeItem(STORAGE_HOUSE);
-      renderHouse(null);
-    }
+    // init
+    renderHeader();
+    renderHouse(loadHouse());
 
-    // =========================
-    // Profile (Admin + Family)
-    // =========================
-    const hubChip = $("hubChip");
-    const activeChip = $("activeChip");
+    document.getElementById("btnGreen").addEventListener("click", ()=>setState("GREEN"));
+    document.getElementById("btnYellow").addEventListener("click", ()=>setState("YELLOW"));
+    document.getElementById("btnRed").addEventListener("click", ()=>setState("RED"));
+    document.getElementById("btnClear").addEventListener("click", ()=>{ clearHouse(); renderHouse(null); });
 
-    function defaultProfile() {
-      return {
-        hubName: "",
-        admin: { name: "", notes: "" },
-        members: [], // {id, name, role, notes, createdAt}
-        prefs: { largeText: false, highContrast: false },
-        updatedAt: nowIso()
-      };
-    }
-
-    function readProfile() {
-      const raw = localStorage.getItem(STORAGE_PROFILE);
-      if (!raw) return defaultProfile();
-      const parsed = safeJsonParse(raw);
-      if (!parsed) return defaultProfile();
-      // upgrade-safe defaults
-      return {
-        ...defaultProfile(),
-        ...parsed,
-        admin: { ...defaultProfile().admin, ...(parsed.admin || {}) },
-        prefs: { ...defaultProfile().prefs, ...(parsed.prefs || {}) },
-        members: Array.isArray(parsed.members) ? parsed.members : []
-      };
-    }
-
-    function writeProfile(profile) {
-      profile.updatedAt = nowIso();
-      localStorage.setItem(STORAGE_PROFILE, JSON.stringify(profile));
-      return profile;
-    }
-
-    function getActiveMemberId() {
-      return localStorage.getItem(STORAGE_ACTIVE_MEMBER) || "";
-    }
-
-    function setActiveMemberId(id) {
-      localStorage.setItem(STORAGE_ACTIVE_MEMBER, id);
-      renderChips();
-      renderMembersList();
-    }
-
-    function makeId() {
-      // id curto, estável o suficiente pro MVP
-      return "m_" + Math.random().toString(16).slice(2, 10) + "_" + Date.now().toString(16);
-    }
-
-    function renderChips() {
-      const p = readProfile();
-      const hub = p.hubName?.trim() || "(não configurado)";
-      hubChip.textContent = "Hub: " + hub;
-
-      const activeId = getActiveMemberId();
-      const active = p.members.find(m => m.id === activeId);
-      const activeName =
-        active?.name?.trim() ||
-        p.admin?.name?.trim() ||
-        "(ninguém)";
-      activeChip.textContent = "Ativo: " + activeName;
-    }
-
-    // Preferences apply (minimal)
-    function applyPrefs() {
-      const p = readProfile();
-      const large = !!p.prefs.largeText;
-      const contrast = !!p.prefs.highContrast;
-
-      document.documentElement.style.fontSize = large ? "18px" : "16px";
-
-      // alto contraste simples: mais preto, menos cinza
-      if (contrast) {
-        document.documentElement.style.setProperty("--muted", "rgba(0,0,0,.85)");
-        document.documentElement.style.setProperty("--border", "rgba(0,0,0,.35)");
-      } else {
-        document.documentElement.style.setProperty("--muted", "rgba(0,0,0,.65)");
-        document.documentElement.style.setProperty("--border", "rgba(0,0,0,.12)");
-      }
-    }
-
-    // Members UI
-    const membersList = $("membersList");
-
-    function memberCard(member, activeId) {
-      const isActive = member.id === activeId;
-      const role = member.role?.trim() ? member.role.trim() : "membro";
-      const notes = member.notes?.trim() ? member.notes.trim() : "";
-
-      const div = document.createElement("div");
-      div.className = "membercard";
-
-      const left = document.createElement("div");
-      left.innerHTML = `
-        <strong>${escapeHtml(member.name || "Sem nome")}</strong>
-        <div class="membermeta">${escapeHtml(role)}${notes ? " · " + escapeHtml(notes.slice(0,60)) : ""}</div>
-      `;
-
-      const right = document.createElement("div");
-      right.className = "cardactions";
-
-      const btnActive = document.createElement("button");
-      btnActive.className = "mini" + (isActive ? " active" : "");
-      btnActive.textContent = isActive ? "Ativo" : "Tornar ativo";
-      btnActive.addEventListener("click", () => setActiveMemberId(member.id));
-
-      const btnEdit = document.createElement("button");
-      btnEdit.className = "mini";
-      btnEdit.textContent = "Editar";
-      btnEdit.addEventListener("click", () => editMember(member.id));
-
-      const btnDel = document.createElement("button");
-      btnDel.className = "mini";
-      btnDel.textContent = "Remover";
-      btnDel.addEventListener("click", () => removeMember(member.id));
-
-      right.append(btnActive, btnEdit, btnDel);
-      div.append(left, right);
-      return div;
-    }
-
-    function renderMembersList() {
-      const p = readProfile();
-      const activeId = getActiveMemberId();
-      membersList.innerHTML = "";
-
-      if (!p.members.length) {
-        const empty = document.createElement("div");
-        empty.className = "muted";
-        empty.textContent = "Nenhum membro cadastrado ainda. Clique em “Adicionar membro”.";
-        membersList.appendChild(empty);
-        return;
-      }
-
-      p.members.forEach(m => membersList.appendChild(memberCard(m, activeId)));
-    }
-
-    function promptMember(initial = {}) {
-      const name = (prompt("Nome do membro:", initial.name || "") || "").trim();
-      if (!name) return null;
-
-      const role = (prompt("Papel (ex.: criança, mãe, pai, cuidador, escola):", initial.role || "membro") || "").trim();
-      const notes = (prompt("Notas operacionais (opcional):", initial.notes || "") || "").trim();
-
-      return { name, role, notes };
-    }
-
-    function addMember() {
-      const p = readProfile();
-      const data = promptMember();
-      if (!data) return;
-
-      const member = { id: makeId(), ...data, createdAt: nowIso() };
-      p.members.push(member);
-      writeProfile(p);
-
-      // se não tem ativo, define este
-      if (!getActiveMemberId()) setActiveMemberId(member.id);
-
-      renderChips();
-      renderMembersList();
-    }
-
-    function editMember(id) {
-      const p = readProfile();
-      const idx = p.members.findIndex(m => m.id === id);
-      if (idx < 0) return;
-
-      const updated = promptMember(p.members[idx]);
-      if (!updated) return;
-
-      p.members[idx] = { ...p.members[idx], ...updated };
-      writeProfile(p);
-
-      renderChips();
-      renderMembersList();
-    }
-
-    function removeMember(id) {
-      const p = readProfile();
-      const member = p.members.find(m => m.id === id);
-      if (!member) return;
-
-      const ok = confirm(`Remover "${member.name}"?`);
-      if (!ok) return;
-
-      p.members = p.members.filter(m => m.id !== id);
-      writeProfile(p);
-
-      // se removeu o ativo, limpa ou seta outro
-      if (getActiveMemberId() === id) {
-        const next = p.members[0]?.id || "";
-        if (next) setActiveMemberId(next);
-        else localStorage.removeItem(STORAGE_ACTIVE_MEMBER);
-      }
-
-      renderChips();
-      renderMembersList();
-    }
-
-    function escapeHtml(str){
-      return String(str)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    // =========================
-    // Modal behavior
-    // =========================
-    const overlay = $("overlay");
-    const btnProfile = $("btnProfile");
-    const btnClose = $("btnClose");
-    const tabs = Array.from(document.querySelectorAll(".tab"));
-    const panels = {
-      meu: $("panel-meu"),
-      familia: $("panel-familia"),
-      prefs: $("panel-prefs")
-    };
-
-    function openModal() {
-      // carregar campos atuais
-      const p = readProfile();
-      $("hubName").value = p.hubName || "";
-      $("adminName").value = p.admin?.name || "";
-      $("adminNotes").value = p.admin?.notes || "";
-
-      $("largeText").value = p.prefs.largeText ? "1" : "0";
-      $("highContrast").value = p.prefs.highContrast ? "1" : "0";
-
-      renderMembersList();
-
-      overlay.classList.add("show");
-      overlay.setAttribute("aria-hidden", "false");
-    }
-
-    function closeModal() {
-      overlay.classList.remove("show");
-      overlay.setAttribute("aria-hidden", "true");
-    }
-
-    function setTab(key) {
-      tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === key));
-      Object.entries(panels).forEach(([k, el]) => el.classList.toggle("show", k === key));
-    }
-
-    btnProfile.addEventListener("click", () => { openModal(); setTab("meu"); });
-    btnClose.addEventListener("click", closeModal);
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
-
-    tabs.forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
-
-    // Save Meu perfil
-    $("btnSaveMe").addEventListener("click", () => {
-      const p = readProfile();
-      p.hubName = ($("hubName").value || "").trim();
-      p.admin = {
-        name: ($("adminName").value || "").trim(),
-        notes: ($("adminNotes").value || "").trim()
-      };
-      writeProfile(p);
-      renderChips();
-      alert("Perfil salvo.");
+    window.addEventListener("keydown",(e)=>{
+      if (e.key === "1") setState("GREEN");
+      if (e.key === "2") setState("YELLOW");
+      if (e.key === "3") setState("RED");
     });
-
-    // Family
-    $("btnAddMember").addEventListener("click", addMember);
-
-    // Prefs
-    $("btnSavePrefs").addEventListener("click", () => {
-      const p = readProfile();
-      p.prefs.largeText = $("largeText").value === "1";
-      p.prefs.highContrast = $("highContrast").value === "1";
-      writeProfile(p);
-      applyPrefs();
-      alert("Preferências salvas.");
-    });
-
-    $("btnResetAll").addEventListener("click", () => {
-      const ok = confirm("Isso vai apagar tudo (perfil + preferências + estado da casa). Continuar?");
-      if (!ok) return;
-      localStorage.removeItem(STORAGE_PROFILE);
-      localStorage.removeItem(STORAGE_ACTIVE_MEMBER);
-      localStorage.removeItem(STORAGE_HOUSE);
-      renderHouse(null);
-      renderChips();
-      applyPrefs();
-      alert("Tudo resetado.");
-    });
-
-    // =========================
-    // Wire house state buttons + shortcuts
-    // =========================
-    $("btnGreen").addEventListener("click", () => setHouseState("GREEN"));
-    $("btnYellow").addEventListener("click", () => setHouseState("YELLOW"));
-    $("btnRed").addEventListener("click", () => setHouseState("RED"));
-    $("btnClear").addEventListener("click", clearHouse);
-
-    window.addEventListener("keydown", (e) => {
-      if (overlay.classList.contains("show")) {
-        if (e.key === "Escape") closeModal();
-        return;
-      }
-      if (e.key === "1") setHouseState("GREEN");
-      if (e.key === "2") setHouseState("YELLOW");
-      if (e.key === "3") setHouseState("RED");
-      if (e.key.toLowerCase() === "p") { openModal(); setTab("meu"); }
-    });
-
-    // =========================
-    // Init
-    // =========================
-    renderHouse(readHouse());
-    renderChips();
-    applyPrefs();
   </script>
 </body>
 </html>
