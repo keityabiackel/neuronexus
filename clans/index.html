@@ -1,228 +1,199 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Clãs · NeuroNexus</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="../assets/app.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clãs · NeuroNexus</title>
+<link rel="stylesheet" href="../assets/app.css" />
 </head>
+
 <body>
-  <main class="wrap">
-    <header class="header">
-      <div class="brandline">
-        <div class="logo">
-          <img src="../assets/logo.png" alt="Logo NeuroNexus" />
-        </div>
-        <div class="brandtext">
-          <h1>NEURONEXUS</h1>
-          <p>Clãs · um ou mais núcleos familiares no mesmo navegador</p>
-        </div>
+<main class="wrap">
+  <header class="header">
+    <div class="brandline">
+      <div class="brandtext">
+        <h1>NEURONEXUS</h1>
+        <p>Clãs · núcleos familiares</p>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="btn" href="../index.html">🏠 Estado da Casa</a>
+      <a class="btn" href="../profiles/index.html">👥 Pessoas</a>
+    </nav>
+  </header>
+
+  <!-- CRIAR CLÃ -->
+  <section class="card">
+    <h2>Novo Clã</h2>
+    <div class="grid2">
+      <div class="field">
+        <label>Nome do Clã</label>
+        <input id="clanName" placeholder="Ex.: Casa da Mamãe" />
+      </div>
+      <div class="field">
+        <label>Responsável</label>
+        <input id="adminName" placeholder="Ex.: Keity" />
+      </div>
+    </div>
+    <button class="btn primary" id="createClan">Criar Clã</button>
+  </section>
+
+  <!-- LISTA DE CLÃS -->
+  <section class="card">
+    <h2>Clãs existentes</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ativo</th>
+          <th>Nome</th>
+          <th>Responsável</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="clanRows"></tbody>
+    </table>
+  </section>
+
+  <!-- MEMBROS DO CLÃ ATIVO -->
+  <section class="card">
+    <h2>Membros do Clã Ativo</h2>
+    <p class="small" id="activeClanLabel">—</p>
+
+    <div class="grid2">
+      <div>
+        <h4>Adicionar pessoa existente</h4>
+        <select id="personSelect"></select>
+        <input id="roleInClan" placeholder="Papel no clã (ex.: mãe, filho, tia)" />
+        <button class="btn" id="addMember">Adicionar</button>
       </div>
 
-      <nav class="nav">
-        <a class="btn" href="../index.html">🏠 Estado da Casa</a>
-        <a class="btn" href="../profiles/index.html">👥 Membros do Clã</a>
-      </nav>
-    </header>
-
-    <section class="card">
-      <div class="topbar">
-        <div class="brand">
-          <h2 style="margin:0">Clãs</h2>
-          <p style="margin:6px 0 0">
-            Um Clã é um núcleo operacional (casa, família extensa, “casa da mãe”, “minha casa”, etc.).
-            Uma pessoa pode participar de vários Clãs sem duplicar cadastro.
-          </p>
-        </div>
+      <div>
+        <h4>Membros atuais</h4>
+        <ul id="memberList"></ul>
       </div>
+    </div>
+  </section>
+</main>
 
-      <div class="row" style="margin: 10px 0 12px">
-        <button class="btn primary" id="new">+ Novo Clã</button>
-      </div>
+<script type="module">
+import {
+  defaultClan, upsertClan, loadClans, deleteClan,
+  loadPersons,
+  loadActiveClanId, setActiveClanId,
+  addMembership, removeMembership, membersOfClan
+} from "../assets/app.js";
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th style="width:120px">Ativo</th>
-            <th>Nome</th>
-            <th style="width:220px">Admin</th>
-            <th style="width:220px">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
+const clanRows = document.getElementById("clanRows");
+const personSelect = document.getElementById("personSelect");
+const memberList = document.getElementById("memberList");
+const activeClanLabel = document.getElementById("activeClanLabel");
 
-      <p class="hint" id="hint"></p>
-    </section>
+function renderClans(){
+  const clans = loadClans();
+  const activeId = loadActiveClanId();
+  clanRows.innerHTML = "";
 
-    <section class="card" style="margin-top:16px">
-      <h2>Editar / Criar Clã</h2>
-      <div class="grid2" style="margin-top:10px">
-        <div class="field">
-          <label for="name">Nome do Clã</label>
-          <input id="name" placeholder="Ex.: Casa da Mãe / Minha Casa / Família Abiáquio" />
-        </div>
-        <div class="field">
-          <label for="admin">Pessoa responsável (admin)</label>
-          <input id="admin" placeholder="Ex.: Keity" />
-        </div>
-        <div class="field" style="grid-column: 1 / -1">
-          <label for="notes">Notas (opcional)</label>
-          <input id="notes" placeholder="Ex.: regras da casa, contatos úteis, observações gerais..." />
-        </div>
-      </div>
+  clans.forEach(c=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <button class="btn ${c.id===activeId?'primary':''}" data-active="${c.id}">
+          ${c.id===activeId?'Ativo':'Ativar'}
+        </button>
+      </td>
+      <td>${c.name}</td>
+      <td>${c.adminName}</td>
+      <td>
+        <button class="btn danger" data-del="${c.id}">Excluir</button>
+      </td>
+    `;
+    clanRows.appendChild(tr);
+  });
 
-      <div class="row" style="margin-top:12px">
-        <button class="btn primary" id="save">Salvar</button>
-        <a class="btn" id="membersLink" href="./members.html">Gerenciar membros</a>
-        <button class="btn danger" id="del">Excluir</button>
-      </div>
-
-      <p class="hint">O Clã “ativo” é o que aparece como contexto na página “Membros do Clã”.</p>
-    </section>
-  </main>
-
-  <script type="module">
-    import {
-      loadClans, upsertClan, deleteClan,
-      loadActiveClanId, setActiveClanId
-    } from "../assets/app.js";
-
-    const rows = document.getElementById("rows");
-    const hint = document.getElementById("hint");
-
-    const name = document.getElementById("name");
-    const admin = document.getElementById("admin");
-    const notes = document.getElementById("notes");
-
-    const btnNew = document.getElementById("new");
-    const btnSave = document.getElementById("save");
-    const btnDel = document.getElementById("del");
-    const membersLink = document.getElementById("membersLink");
-
-    let currentId = "";
-
-    function escapeHtml(str){
-      return String(str || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    function loadToForm(id){
-      const clans = loadClans();
-      const c = clans.find(x => x.id === id) || null;
-
-      currentId = id || "";
-      name.value = c?.name || "";
-      admin.value = c?.adminName || "";
-      notes.value = c?.notes || "";
-
-      // link com query
-      membersLink.href = "./members.html?clanId=" + encodeURIComponent(currentId || loadActiveClanId() || "");
-    }
-
-    function render(){
-      const clans = loadClans();
-      const activeId = loadActiveClanId();
-
-      rows.innerHTML = "";
-
-      if (!clans.length){
-        rows.innerHTML = `<tr><td colspan="4">Nenhum Clã cadastrado.</td></tr>`;
-        hint.textContent = "Crie um Clã para começar. Ex.: “Minha Casa” e “Casa da Mãe”.";
-        loadToForm("");
-        return;
-      }
-
-      clans.sort((a,b)=>{
-        const ax = a.id === activeId ? 0 : 1;
-        const bx = b.id === activeId ? 0 : 1;
-        if (ax !== bx) return ax - bx;
-        return String(a.name||"").localeCompare(String(b.name||""), "pt-BR");
-      });
-
-      for (const c of clans){
-        const isActive = c.id === activeId;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><button class="btn ${isActive ? "primary" : ""}" data-active="${c.id}">${isActive ? "Ativo" : "Definir"}</button></td>
-          <td><strong>${escapeHtml(c.name || "Sem nome")}</strong></td>
-          <td>${escapeHtml(c.adminName || "—")}</td>
-          <td class="row" style="gap:8px">
-            <button class="btn" data-edit="${c.id}">Editar</button>
-            <a class="btn" href="./members.html?clanId=${encodeURIComponent(c.id)}">Membros</a>
-          </td>
-        `;
-        rows.appendChild(tr);
-      }
-
-      rows.querySelectorAll("[data-active]").forEach(b=>{
-        b.addEventListener("click", ()=>{
-          setActiveClanId(b.getAttribute("data-active"));
-          render();
-        });
-      });
-
-      rows.querySelectorAll("[data-edit]").forEach(b=>{
-        b.addEventListener("click", ()=>{
-          loadToForm(b.getAttribute("data-edit"));
-        });
-      });
-
-      hint.textContent = "Tudo fica salvo apenas neste navegador (LocalStorage).";
-
-      // auto-seleciona algo no form
-      if (!currentId){
-        loadToForm(activeId || clans[0].id);
-      }
-    }
-
-    btnNew.addEventListener("click", ()=>{
-      currentId = "";
-      name.value = "";
-      admin.value = "";
-      notes.value = "";
-      membersLink.href = "./members.html";
-      name.focus();
-    });
-
-    btnSave.addEventListener("click", ()=>{
-      const payload = {
-        id: currentId || undefined,
-        name: name.value.trim(),
-        adminName: admin.value.trim(),
-        notes: notes.value.trim()
-      };
-      const saved = upsertClan(payload);
-
-      // se não existe ativo, seta
-      const activeId = loadActiveClanId();
-      if (!activeId) setActiveClanId(saved.id);
-
-      currentId = saved.id;
-      membersLink.href = "./members.html?clanId=" + encodeURIComponent(saved.id);
-
-      alert("Clã salvo.");
+  document.querySelectorAll("[data-active]").forEach(b=>{
+    b.onclick = ()=>{
+      setActiveClanId(b.dataset.active);
       render();
-    });
+    };
+  });
 
-    btnDel.addEventListener("click", ()=>{
-      if (!currentId) return alert("Selecione um Clã para excluir.");
-      if (!confirm("Excluir este Clã? Isso remove também os vínculos dele (não apaga as pessoas).")) return;
-      deleteClan(currentId);
-      currentId = "";
-      render();
-    });
+  document.querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = ()=>{
+      if(confirm("Excluir este clã?")){
+        deleteClan(b.dataset.del);
+        render();
+      }
+    };
+  });
+}
 
-    render();
-  </script>
+function renderPersons(){
+  const persons = loadPersons();
+  personSelect.innerHTML = `<option value="">Selecione</option>`;
+  persons.forEach(p=>{
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = p.name;
+    personSelect.appendChild(o);
+  });
+}
+
+function renderMembers(){
+  const clanId = loadActiveClanId();
+  memberList.innerHTML = "";
+  if(!clanId){
+    activeClanLabel.textContent = "Nenhum clã ativo.";
+    return;
+  }
+
+  const members = membersOfClan(clanId);
+  activeClanLabel.textContent = `Clã ativo: ${loadClans().find(c=>c.id===clanId)?.name}`;
+
+  members.forEach(m=>{
+    const li = document.createElement("li");
+    li.innerHTML = `
+      ${m.person.name} (${m.membership.roleInClan || "—"})
+      <button class="btn danger" data-rm="${m.person.id}">remover</button>
+    `;
+    memberList.appendChild(li);
+  });
+
+  document.querySelectorAll("[data-rm]").forEach(b=>{
+    b.onclick = ()=>{
+      removeMembership(clanId, b.dataset.rm);
+      renderMembers();
+    };
+  });
+}
+
+document.getElementById("createClan").onclick = ()=>{
+  const c = defaultClan();
+  c.name = clanName.value.trim();
+  c.adminName = adminName.value.trim();
+  if(!c.name) return alert("Nome do clã é obrigatório");
+  upsertClan(c);
+  setActiveClanId(c.id);
+  clanName.value = "";
+  adminName.value = "";
+  render();
+};
+
+document.getElementById("addMember").onclick = ()=>{
+  const clanId = loadActiveClanId();
+  const pid = personSelect.value;
+  if(!clanId || !pid) return;
+  addMembership(clanId, pid, roleInClan.value.trim());
+  roleInClan.value = "";
+  renderMembers();
+};
+
+function render(){
+  renderClans();
+  renderPersons();
+  renderMembers();
+}
+
+render();
+</script>
 </body>
 </html>
