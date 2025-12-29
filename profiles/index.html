@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pessoas · NeuroNexus</title>
-<link rel="stylesheet" href="../assets/app.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pessoas · NeuroNexus</title>
+  <link rel="stylesheet" href="../assets/app.css" />
 </head>
+
 <body>
 <main class="wrap">
   <header class="header">
@@ -15,6 +16,7 @@
         <p>Pessoas · perfis únicos</p>
       </div>
     </div>
+
     <nav class="nav">
       <a class="btn" href="../index.html">🏠 Estado da Casa</a>
       <a class="btn" href="../clans/index.html">🏡 Clãs</a>
@@ -24,61 +26,121 @@
 
   <section class="card">
     <h2>Perfis cadastrados</h2>
+
+    <!-- Desktop/paisagem: tabela -->
     <div class="profilesTableWrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>Nascimento</th>
-          <th>Neurotipo-base</th>
-          <th>Atualizado</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Nascimento</th>
+            <th>Neurotipo-base</th>
+            <th>Atualizado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <!-- Mobile/retrato: cartões -->
     <div id="profilesCards" class="profilesCards" aria-label="Perfis cadastrados em formato de cartões"></div>
+
     <p class="small">Dica: uma pessoa pode participar de vários clãs sem recadastrar.</p>
   </section>
 </main>
 
 <script type="module">
-import { loadPersons, deletePerson } from "../assets/app.js";
+  import { loadPersons, deletePerson } from "../assets/app.js";
 
-const rows = document.getElementById("rows");
-const persons = loadPersons();
+  const rows = document.getElementById("rows");
+  const cards = document.getElementById("profilesCards");
+  const persons = loadPersons();
 
-function baseLabel(p){
-  const arr = (p.neuro?.baseTypes || []).slice();
-  if(!arr.length) return "—";
-  return arr.join(", ");
-}
+  function escapeHtml(str = "") {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-rows.innerHTML = "";
-persons.forEach(p=>{
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${p.name || "—"}</td>
-    <td>${p.birthDate || "—"}</td>
-    <td>${baseLabel(p)}</td>
-    <td>${(p.updatedAt || "—").replace("T"," ").slice(0,19)}</td>
-    <td class="actions">
-      <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
-      <button class="btn danger" data-del="${p.id}">Excluir</button>
-    </td>
-  `;
-  rows.appendChild(tr);
-});
+  function baseLabel(p){
+    const arr = (p.neuro?.baseTypes || []).slice();
+    if(!arr.length) return "—";
+    return arr.join(", ");
+  }
 
-document.querySelectorAll("[data-del]").forEach(b=>{
-  b.onclick = ()=>{
-    if(confirm("Excluir esta pessoa? (isso remove ela de todos os clãs)")){
-      deletePerson(b.dataset.del);
-      location.reload();
+  function formatUpdated(iso){
+    if(!iso) return "—";
+    return String(iso).replace("T"," ").slice(0,19);
+  }
+
+  // ====== TABELA (desktop/paisagem) ======
+  rows.innerHTML = "";
+  persons.forEach(p=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(p.name || "—")}</td>
+      <td>${escapeHtml(p.birthDate || "—")}</td>
+      <td>${escapeHtml(baseLabel(p))}</td>
+      <td>${escapeHtml(formatUpdated(p.updatedAt))}</td>
+      <td class="actions">
+        <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
+        <button class="btn danger" data-del="${escapeHtml(p.id)}">Excluir</button>
+      </td>
+    `;
+    rows.appendChild(tr);
+  });
+
+  // ====== CARDS (mobile/retrato) ======
+  function renderCards(list){
+    if(!list || list.length === 0){
+      cards.innerHTML = `<div class="emptyHint">Nenhum perfil cadastrado ainda.</div>`;
+      return;
     }
-  };
-});
+
+    cards.innerHTML = list.map(p => {
+      const nome = escapeHtml(p.name || "Sem nome");
+      const nasc = escapeHtml(p.birthDate || "—");
+      const base = escapeHtml(baseLabel(p));
+      const upd  = escapeHtml(formatUpdated(p.updatedAt));
+      const id   = escapeHtml(p.id);
+
+      return `
+        <article class="profileCard" data-id="${id}">
+          <header class="profileCardHeader">
+            <div class="profileCardTitle">${nome}</div>
+            <div class="profileCardMeta">
+              <span class="chip"><strong>Nasc.</strong> ${nasc}</span>
+              <span class="chip"><strong>Base</strong> ${base}</span>
+              <span class="chip"><strong>Atual.</strong> ${upd}</span>
+            </div>
+          </header>
+
+          <div class="profileCardActions">
+            <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
+            <button class="btn danger" data-del="${id}">Excluir</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  renderCards(persons);
+
+  // ====== EXCLUSÃO (vale para tabela e cards) ======
+  document.querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = ()=>{
+      const id = b.dataset.del;
+      if(confirm("Excluir esta pessoa? (isso remove ela de todos os clãs)")){
+        deletePerson(id);
+        location.reload();
+      }
+    };
+  });
 </script>
+
 </body>
 </html>
