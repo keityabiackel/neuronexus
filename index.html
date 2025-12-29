@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NeuroNexus</title>
+  <title>NeuroNexus · Estado da Casa</title>
 
-  <!-- Fontes (mesma “pegada PRISMAS”) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
@@ -16,95 +15,157 @@
   <main class="wrap">
     <header class="header">
       <div class="brandline">
-        <div class="logo" aria-label="Logo NeuroNexus">
+        <div class="logo">
           <img src="./assets/logo.png" alt="Logo NeuroNexus" />
         </div>
         <div class="brandtext">
           <h1>NEURONEXUS</h1>
-          <p>Dados observáveis para coordenação familiar neurodivergente (MVP · client-side)</p>
+          <p id="sub">MVP Fase 0 · sem backend</p>
         </div>
       </div>
 
       <nav class="nav">
-        <a class="btn" href="./profiles/index.html">👥 Perfis</a>
+        <a class="btn" href="./clans/index.html">🏡 Clãs</a>
+        <a class="btn" href="./profiles/index.html">👥 Membros do Clã</a>
       </nav>
     </header>
 
     <section class="card">
-      <h2>Estado da Casa</h2>
-      <p class="small" style="margin-top:0">
-        Um indicador compartilhado, simples e acionável do estado do ambiente doméstico.
-        Menos interpretação; mais dados observáveis.
-      </p>
-
-      <div class="badge" style="margin: 10px 0 12px">
-        <div class="row" style="gap:10px">
-          <span id="dot" class="dot yellow"></span>
-          <strong id="stateLabel">EM BREVE</strong>
+      <div class="topbar">
+        <div class="brand">
+          <h2>Estado da Casa</h2>
+          <p>
+            Um indicador compartilhado e acionável do estado do ambiente doméstico.
+            Menos interpretação; mais dados observáveis.
+          </p>
         </div>
-        <span class="small" id="updatedAt">—</span>
+        <div class="small" id="updated">—</div>
       </div>
 
-      <div class="row">
-        <button class="btn" id="g" type="button">🟢 VERDE</button>
-        <button class="btn primary" id="y" type="button">🟡 AMARELO</button>
-        <button class="btn" id="r" type="button">🔴 VERMELHO</button>
-        <button class="btn" id="clear" type="button">Limpar estado</button>
+      <!-- Badge com cor + texto + estampa -->
+      <div class="stateBadge" id="badge" data-s="YELLOW" role="status" aria-live="polite" style="margin:12px 0">
+        <div class="stateLeft">
+          <span class="stateIcon" aria-hidden="true"></span>
+          <span class="statePattern" aria-hidden="true"></span>
+          <span>Estado: <span class="stateText" id="label">—</span></span>
+        </div>
+        <div class="small" id="clanName">Clã: —</div>
       </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="green" title="Atalho: 1">🟢 VERDE</button>
+        <button class="btn" id="yellow" title="Atalho: 2">🟡 AMARELO</button>
+        <button class="btn" id="red" title="Atalho: 3">🔴 VERMELHO</button>
+        <button class="btn danger" id="clear">Limpar estado</button>
+      </div>
+
+      <p class="hint" style="margin-top:10px">
+        Acessibilidade: além de cor, cada estado tem uma “estampa” (pontilhado / listras / hatch) + texto + ícone.
+        Atalhos: 1 (Verde), 2 (Amarelo), 3 (Vermelho).
+      </p>
 
       <p class="hint">
-        Atalhos: 1 (Verde), 2 (Amarelo), 3 (Vermelho). Salvo apenas no seu navegador (LocalStorage).
+        Este MVP salva apenas no seu navegador (LocalStorage). Nada é enviado para lugar nenhum.
       </p>
+    </section>
 
-      <div class="footer-note">
-        <span>NeuroNexus · client-side · sem backend</span>
-        <span id="mini">—</span>
-      </div>
+    <section class="card" style="margin-top:16px">
+      <h2 style="margin:0">Do semáforo para a evidência</h2>
+      <p style="margin:8px 0 0" class="small">
+        Você está certa: às vezes a gente não “define” o estado — a gente <strong>descobre</strong>.
+        Próximo passo: um painel de sinais observáveis (sono, ingestão, dor, estímulo, rotinas quebradas, episódios com timestamp)
+        para sugerir o estado com base em evidências.
+      </p>
     </section>
   </main>
 
   <script type="module">
-    import { loadHouse, saveHouse, clearHouse, formatWhen } from "./assets/app.js";
+    import { loadClans, loadActiveClanId, setActiveClanId, loadHouse, saveHouse, clearHouse, formatWhen } from "./assets/app.js";
 
-    const dot = document.getElementById("dot");
-    const stateLabel = document.getElementById("stateLabel");
-    const updatedAt = document.getElementById("updatedAt");
-    const mini = document.getElementById("mini");
+    const sub = document.getElementById("sub");
+    const updated = document.getElementById("updated");
+    const badge = document.getElementById("badge");
+    const label = document.getElementById("label");
+    const clanName = document.getElementById("clanName");
 
-    function paint(state){
-      dot.classList.remove("green","yellow","red");
-      if (state === "GREEN") { dot.classList.add("green"); stateLabel.textContent = "VERDE"; }
-      else if (state === "YELLOW") { dot.classList.add("yellow"); stateLabel.textContent = "AMARELO"; }
-      else if (state === "RED") { dot.classList.add("red"); stateLabel.textContent = "VERMELHO"; }
-      else { dot.classList.add("yellow"); stateLabel.textContent = "EM BREVE"; }
+    const btnG = document.getElementById("green");
+    const btnY = document.getElementById("yellow");
+    const btnR = document.getElementById("red");
+    const btnC = document.getElementById("clear");
+
+    function resolveClan(){
+      const clans = loadClans();
+      if (!clans.length){
+        sub.textContent = "Nenhum Clã criado ainda — vá em Clãs";
+        clanName.textContent = "Clã: —";
+        return { id:"", name:"—" };
+      }
+      const activeId = loadActiveClanId() || clans[0].id;
+      const c = clans.find(x => x.id === activeId) || clans[0];
+      setActiveClanId(c.id);
+      clanName.textContent = "Clã: " + (c.name || "Sem nome");
+      return { id: c.id, name: c.name || "Sem nome" };
     }
 
-    function refresh(){
-      const h = loadHouse();
-      if (!h){
-        paint(null);
-        updatedAt.textContent = "—";
-        mini.textContent = "Nada registrado ainda.";
+    function applyState(state){
+      // fundo do site
+      if (state) document.body.setAttribute("data-house", state);
+      else document.body.removeAttribute("data-house");
+
+      // badge
+      badge.setAttribute("data-s", state || "YELLOW");
+      label.textContent = state === "GREEN" ? "VERDE"
+                        : state === "YELLOW" ? "AMARELO"
+                        : state === "RED" ? "VERMELHO"
+                        : "—";
+    }
+
+    function render(){
+      const clan = resolveClan();
+      const h = clan.id ? loadHouse(clan.id) : null;
+
+      if (!clan.id){
+        applyState(null);
+        updated.textContent = "Crie um Clã para salvar estados.";
         return;
       }
-      paint(h.state);
-      updatedAt.textContent = "Atualizado em: " + formatWhen(h.updatedAt);
-      mini.textContent = "Persistência local ativa.";
+
+      if (!h){
+        applyState(null);
+        updated.textContent = "Estado ainda não definido.";
+        return;
+      }
+
+      applyState(h.state);
+      updated.textContent = "Atualizado em: " + formatWhen(h.updatedAt);
     }
 
-    document.getElementById("g").onclick = ()=>{ saveHouse("GREEN"); refresh(); };
-    document.getElementById("y").onclick = ()=>{ saveHouse("YELLOW"); refresh(); };
-    document.getElementById("r").onclick = ()=>{ saveHouse("RED"); refresh(); };
-    document.getElementById("clear").onclick = ()=>{ clearHouse(); refresh(); };
+    function setState(s){
+      const clan = resolveClan();
+      if (!clan.id) return alert("Crie um Clã primeiro (Clãs).");
+      saveHouse(s, clan.id);
+      render();
+    }
 
-    window.addEventListener("keydown", (e)=>{
-      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
-      if (e.key === "1") { saveHouse("GREEN"); refresh(); }
-      if (e.key === "2") { saveHouse("YELLOW"); refresh(); }
-      if (e.key === "3") { saveHouse("RED"); refresh(); }
+    btnG.addEventListener("click", ()=> setState("GREEN"));
+    btnY.addEventListener("click", ()=> setState("YELLOW"));
+    btnR.addEventListener("click", ()=> setState("RED"));
+
+    btnC.addEventListener("click", ()=>{
+      const clan = resolveClan();
+      if (!clan.id) return;
+      clearHouse(clan.id);
+      render();
     });
 
-    refresh();
+    window.addEventListener("keydown", (e)=>{
+      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
+      if (e.key === "1") setState("GREEN");
+      if (e.key === "2") setState("YELLOW");
+      if (e.key === "3") setState("RED");
+    });
+
+    render();
   </script>
 </body>
 </html>
