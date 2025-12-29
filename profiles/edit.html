@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Editar perfil · NeuroNexus</title>
+  <title>Editar pessoa · NeuroNexus</title>
 
-  <!-- Fontes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
@@ -21,20 +20,21 @@
         </div>
         <div class="brandtext">
           <h1>NEURONEXUS</h1>
-          <p>Perfis do Clã · dados fixos, semipermanentes e histórico</p>
+          <p>Pessoa · cadastro único (pode estar em vários Clãs)</p>
         </div>
       </div>
 
       <nav class="nav">
-        <a class="btn" href="./index.html">👥 Perfis</a>
+        <a class="btn" href="./index.html">👥 Membros do Clã</a>
+        <a class="btn" href="../clans/index.html">🏡 Clãs</a>
         <a class="btn" href="../index.html">🏠 Estado da Casa</a>
       </nav>
     </header>
 
     <div class="topbar">
       <div class="brand">
-        <h1 id="title">Novo perfil</h1>
-        <p>Dados fixos + semipermanentes. Eventos ficam no histórico (timestamp).</p>
+        <h1 id="title">Nova pessoa</h1>
+        <p>Dados fixos + semipermanentes. “Detecção” é um rótulo amplo (precoce/tardia), não data.</p>
       </div>
     </div>
 
@@ -50,7 +50,7 @@
           <input id="birthDate" type="date" />
         </div>
         <div class="field">
-          <label for="role">Papel</label>
+          <label for="role">Papel (geral)</label>
           <select id="role">
             <option value="membro">membro</option>
             <option value="criança">criança</option>
@@ -68,35 +68,59 @@
 
       <div class="row" style="margin-top:12px">
         <button class="btn primary" id="save" type="button">Salvar</button>
-        <button class="btn" id="setActive" type="button">Tornar ativo</button>
       </div>
     </section>
 
-    <!-- Neurotipos -->
-    <h2 style="margin:16px 0 10px">🧠 Neurotipos e Camadas Associadas</h2>
+    <!-- Neuroperfil -->
+    <h2 style="margin:16px 0 10px">🧠 Perfil Neuro</h2>
     <section class="card">
-      <p class="small" style="margin-top:0">
-        Selecione itens do mosaico e registre apenas o necessário: <strong>status</strong>, <strong>desde</strong> e <strong>nota operacional</strong>.
-        (Leituras/explicações por item entram depois.)
+      <div class="grid2">
+        <div class="field">
+          <label for="overall">Classificação geral</label>
+          <select id="overall">
+            <option value="nao_informado">não informado</option>
+            <option value="neurotipico">neurotípico</option>
+            <option value="neurodivergente">neurodivergente</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="overallNotes">Observação (opcional)</label>
+          <input id="overallNotes" placeholder="Ex.: sem diagnóstico; avaliação em andamento; etc." />
+        </div>
+      </div>
+
+      <p class="hint" style="margin-top:10px">
+        Se “Neurotípico”, você pode deixar o resto vazio (ou usar camadas se houver algo específico).
       </p>
 
-      <table class="table" style="margin-top:10px">
+      <h2 style="margin:14px 0 8px; font-size:16px">Neurotipos-BASE</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th style="width:140px">Status</th>
+            <th style="width:160px">Detecção</th>
+            <th>Notas</th>
+            <th style="width:110px">Usar</th>
+          </tr>
+        </thead>
+        <tbody id="baseRows"></tbody>
+      </table>
+
+      <h2 style="margin:14px 0 8px; font-size:16px">Camadas Associadas</h2>
+      <table class="table">
         <thead>
           <tr>
             <th>Grupo</th>
             <th>Item</th>
-            <th>Selecionado</th>
-            <th>Status</th>
-            <th>Desde</th>
+            <th style="width:140px">Status</th>
+            <th style="width:160px">Detecção</th>
             <th>Notas</th>
+            <th style="width:110px">Usar</th>
           </tr>
         </thead>
-        <tbody id="neuroRows"></tbody>
+        <tbody id="layerRows"></tbody>
       </table>
-
-      <p class="hint">
-        “Base” pode existir sozinho e organiza o funcionamento global. “Camadas” modulam. “Combinações” descrevem estruturas como 2e.
-      </p>
     </section>
 
     <!-- Alergias -->
@@ -127,16 +151,12 @@
         <tbody id="allergyRows"></tbody>
       </table>
 
-      <p class="hint">Nada some: pode ficar inativo se deixar de ser relevante.</p>
+      <p class="hint">Pode ficar inativo se deixar de ser relevante.</p>
     </section>
   </main>
 
   <script type="module">
-    import {
-      uid, nowIso,
-      loadProfiles, upsertProfile,
-      loadActiveProfileId, setActiveProfileId
-    } from "../assets/app.js";
+    import { uid, nowIso, loadPersons, upsertPerson } from "../assets/app.js";
 
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
@@ -147,15 +167,19 @@
     const role = document.getElementById("role");
     const notes = document.getElementById("notes");
 
+    const overall = document.getElementById("overall");
+    const overallNotes = document.getElementById("overallNotes");
+
+    const baseRows = document.getElementById("baseRows");
+    const layerRows = document.getElementById("layerRows");
+
     const allergyLabel = document.getElementById("allergyLabel");
     const allergyNotes = document.getElementById("allergyNotes");
     const allergyRows = document.getElementById("allergyRows");
 
-    const neuroRows = document.getElementById("neuroRows");
-
     let current = null;
 
-    const NEURO_BASE = [
+    const BASE = [
       { key: "autismo", label: "Autismo (TEA)" },
       { key: "tdah", label: "TDAH" },
       { key: "superdotacao", label: "Superdotação / Altas Habilidades" },
@@ -163,157 +187,175 @@
       { key: "tourette", label: "Tourette" }
     ];
 
-    const NEURO_LAYERS = [
+    const LAYERS = [
       { key: "dislexia", label: "Dislexia", group: "Aprendizagem" },
       { key: "discalculia", label: "Discalculia", group: "Aprendizagem" },
       { key: "disgrafia", label: "Disgrafia", group: "Aprendizagem" },
       { key: "hiperlexia", label: "Hiperlexia", group: "Aprendizagem" },
+
       { key: "tpac", label: "TPAC / DPAC", group: "Processamento e execução" },
-      { key: "dispraxia", label: "Dispraxia (Transtorno do Desenvolvimento da Coordenação)", group: "Processamento e execução" },
+      { key: "dispraxia", label: "Dispraxia (TDC)", group: "Processamento e execução" },
+
       { key: "toc", label: "TOC", group: "Emoção e regulação" },
       { key: "ansiedade", label: "Transtornos de Ansiedade", group: "Emoção e regulação" }
     ];
 
-    const NEURO_COMBINATIONS = [
-      { key: "2e_autismo_superdotacao", label: "Dupla excepcionalidade (Autismo + Superdotação)" },
-      { key: "2e_tdah_superdotacao", label: "Dupla excepcionalidade (TDAH + Superdotação)" },
-      { key: "2e_autismo_tdah", label: "Dupla excepcionalidade (Autismo + TDAH)" },
-      { key: "2e_outra", label: "Dupla excepcionalidade (Outra combinação)" }
-    ];
-
-    const STATUS_OPTIONS = [
+    const STATUS = [
+      { value: "nao_informado", label: "não informado" },
       { value: "confirmado", label: "confirmado" },
       { value: "hipotese", label: "hipótese" },
       { value: "traco", label: "traço" },
       { value: "historico", label: "histórico" }
     ];
 
-    function escapeHtml(str){
-      return String(str)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-    function escapeAttr(str){
-      return String(str || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+    const DETECT = [
+      { value: "nao_informado", label: "não informado" },
+      { value: "precoce", label: "precoce" },
+      { value: "tardia", label: "tardia" }
+    ];
+
+    function esc(s){
+      return String(s||"")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
 
-    function ensureNeuroShape(){
-      current.neuro = current.neuro || { base: [], layers: [], combinations: [] };
-      current.neuro.base = Array.isArray(current.neuro.base) ? current.neuro.base : [];
-      current.neuro.layers = Array.isArray(current.neuro.layers) ? current.neuro.layers : [];
-      current.neuro.combinations = Array.isArray(current.neuro.combinations) ? current.neuro.combinations : [];
+    function ensureShape(){
+      current.neuroProfile = current.neuroProfile || { overall: "nao_informado", base: [], layers: [] };
+      current.neuroProfile.base = Array.isArray(current.neuroProfile.base) ? current.neuroProfile.base : [];
+      current.neuroProfile.layers = Array.isArray(current.neuroProfile.layers) ? current.neuroProfile.layers : [];
+      current.allergies = Array.isArray(current.allergies) ? current.allergies : [];
+      current.neuroProfile.overallNotes = current.neuroProfile.overallNotes || "";
     }
 
-    function getNeuroList(category){
-      if (category === "base") return current.neuro.base;
-      if (category === "layers") return current.neuro.layers;
-      return current.neuro.combinations;
-    }
+    function findItem(list, key){ return list.find(x => x.key === key) || null; }
 
-    function findNeuro(category, key){
-      return getNeuroList(category).find(x => x.key === key) || null;
-    }
+    function upsertItem(listName, item, enabled){
+      const list = current.neuroProfile[listName];
+      const exists = findItem(list, item.key);
 
-    function setNeuroChecked(category, item, checked){
-      const list = getNeuroList(category);
-      const exists = findNeuro(category, item.key);
-
-      if (checked && !exists){
-        const payload = { key: item.key, label: item.label, status: "hipotese", since: "", notes: "" };
-        if (category === "layers") payload.group = item.group || "";
-        list.push(payload);
+      if (enabled && !exists){
+        list.push({ key:item.key, label:item.label, status:"hipotese", detect:"nao_informado", notes:"", group:item.group || "" });
       }
-
-      if (!checked && exists){
-        const next = list.filter(x => x.key !== item.key);
-        if (category === "base") current.neuro.base = next;
-        else if (category === "layers") current.neuro.layers = next;
-        else current.neuro.combinations = next;
+      if (!enabled && exists){
+        current.neuroProfile[listName] = list.filter(x => x.key !== item.key);
       }
     }
 
-    function updateNeuroField(category, key, patch){
-      const obj = findNeuro(category, key);
-      if (!obj) return;
-      Object.assign(obj, patch);
-    }
-
-    function statusSelectHtml(selected){
-      return STATUS_OPTIONS.map(o =>
-        `<option value="${o.value}" ${o.value === selected ? "selected" : ""}>${o.label}</option>`
-      ).join("");
+    function selectHtml(options, selected){
+      return options.map(o => `<option value="${o.value}" ${o.value===selected?"selected":""}>${o.label}</option>`).join("");
     }
 
     function renderNeuro(){
-      ensureNeuroShape();
-      neuroRows.innerHTML = "";
+      ensureShape();
 
-      const allRows = [
-        ...NEURO_BASE.map(i => ({ category:"base", group:"Base", ...i })),
-        ...NEURO_LAYERS.map(i => ({ category:"layers", group:i.group, ...i })),
-        ...NEURO_COMBINATIONS.map(i => ({ category:"combinations", group:"Combinações", ...i }))
-      ];
+      // overall
+      overall.value = current.neuroProfile.overall || "nao_informado";
+      overallNotes.value = current.neuroProfile.overallNotes || "";
 
-      for (const item of allRows){
-        const obj = findNeuro(item.category, item.key);
-        const checked = !!obj;
-
+      // BASE
+      baseRows.innerHTML = "";
+      for (const it of BASE){
+        const obj = findItem(current.neuroProfile.base, it.key);
+        const on = !!obj;
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${escapeHtml(item.group || "")}</td>
-          <td>${escapeHtml(item.label || "")}</td>
-          <td><input type="checkbox" data-nchk="${item.category}:${item.key}" ${checked ? "checked" : ""} /></td>
-          <td><select data-nstatus="${item.category}:${item.key}" ${checked ? "" : "disabled"}>${statusSelectHtml(obj?.status || "hipotese")}</select></td>
-          <td><input type="date" data-nsince="${item.category}:${item.key}" value="${escapeAttr(obj?.since || "")}" ${checked ? "" : "disabled"} /></td>
-          <td><input type="text" data-nnotes="${item.category}:${item.key}" value="${escapeAttr(obj?.notes || "")}" placeholder="nota operacional" ${checked ? "" : "disabled"} /></td>
+          <td><strong>${esc(it.label)}</strong></td>
+          <td>
+            <select data-s="base:${it.key}" ${on?"":"disabled"}>
+              ${selectHtml(STATUS, obj?.status || "hipotese")}
+            </select>
+          </td>
+          <td>
+            <select data-d="base:${it.key}" ${on?"":"disabled"}>
+              ${selectHtml(DETECT, obj?.detect || "nao_informado")}
+            </select>
+          </td>
+          <td><input data-n="base:${it.key}" type="text" value="${esc(obj?.notes||"")}" ${on?"":"disabled"} placeholder="nota operacional"/></td>
+          <td style="text-align:center">
+            <input type="checkbox" data-on="base:${it.key}" ${on?"checked":""}/>
+          </td>
         `;
-        neuroRows.appendChild(tr);
+        baseRows.appendChild(tr);
       }
 
-      neuroRows.querySelectorAll("[data-nchk]").forEach(el=>{
-        el.addEventListener("change", ()=>{
-          const [category, key] = el.getAttribute("data-nchk").split(":");
-          const item =
-            category === "base" ? NEURO_BASE.find(x=>x.key===key)
-            : category === "layers" ? NEURO_LAYERS.find(x=>x.key===key)
-            : NEURO_COMBINATIONS.find(x=>x.key===key);
+      // LAYERS
+      layerRows.innerHTML = "";
+      for (const it of LAYERS){
+        const obj = findItem(current.neuroProfile.layers, it.key);
+        const on = !!obj;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${esc(it.group)}</td>
+          <td><strong>${esc(it.label)}</strong></td>
+          <td>
+            <select data-s="layers:${it.key}" ${on?"":"disabled"}>
+              ${selectHtml(STATUS, obj?.status || "hipotese")}
+            </select>
+          </td>
+          <td>
+            <select data-d="layers:${it.key}" ${on?"":"disabled"}>
+              ${selectHtml(DETECT, obj?.detect || "nao_informado")}
+            </select>
+          </td>
+          <td><input data-n="layers:${it.key}" type="text" value="${esc(obj?.notes||"")}" ${on?"":"disabled"} placeholder="nota operacional"/></td>
+          <td style="text-align:center">
+            <input type="checkbox" data-on="layers:${it.key}" ${on?"checked":""}/>
+          </td>
+        `;
+        layerRows.appendChild(tr);
+      }
 
-          setNeuroChecked(category, item, el.checked);
+      // bind toggles
+      document.querySelectorAll("[data-on]").forEach(chk=>{
+        chk.addEventListener("change", ()=>{
+          const [listName, key] = chk.getAttribute("data-on").split(":");
+          const item = (listName==="base" ? BASE : LAYERS).find(x => x.key === key);
+          upsertItem(listName, item, chk.checked);
           persist();
           renderNeuro();
         });
       });
 
-      neuroRows.querySelectorAll("[data-nstatus]").forEach(el=>{
-        el.addEventListener("change", ()=>{
-          const [category, key] = el.getAttribute("data-nstatus").split(":");
-          updateNeuroField(category, key, { status: el.value });
+      // bind status/detect/notes
+      document.querySelectorAll("[data-s]").forEach(sel=>{
+        sel.addEventListener("change", ()=>{
+          const [listName, key] = sel.getAttribute("data-s").split(":");
+          const obj = findItem(current.neuroProfile[listName], key);
+          if (!obj) return;
+          obj.status = sel.value;
           persist();
         });
       });
 
-      neuroRows.querySelectorAll("[data-nsince]").forEach(el=>{
-        el.addEventListener("change", ()=>{
-          const [category, key] = el.getAttribute("data-nsince").split(":");
-          updateNeuroField(category, key, { since: el.value });
+      document.querySelectorAll("[data-d]").forEach(sel=>{
+        sel.addEventListener("change", ()=>{
+          const [listName, key] = sel.getAttribute("data-d").split(":");
+          const obj = findItem(current.neuroProfile[listName], key);
+          if (!obj) return;
+          obj.detect = sel.value;
           persist();
         });
       });
 
-      neuroRows.querySelectorAll("[data-nnotes]").forEach(el=>{
-        el.addEventListener("input", ()=>{
-          const [category, key] = el.getAttribute("data-nnotes").split(":");
-          updateNeuroField(category, key, { notes: el.value });
+      document.querySelectorAll("[data-n]").forEach(inp=>{
+        inp.addEventListener("input", ()=>{
+          const [listName, key] = inp.getAttribute("data-n").split(":");
+          const obj = findItem(current.neuroProfile[listName], key);
+          if (!obj) return;
+          obj.notes = inp.value;
           persist();
         });
+      });
+
+      overall.addEventListener("change", ()=>{
+        current.neuroProfile.overall = overall.value;
+        persist();
+      });
+
+      overallNotes.addEventListener("input", ()=>{
+        current.neuroProfile.overallNotes = overallNotes.value;
+        persist();
       });
     }
 
@@ -322,9 +364,7 @@
       const list = current.allergies || [];
 
       if (!list.length){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="5">Nenhuma alergia cadastrada.</td>`;
-        allergyRows.appendChild(tr);
+        allergyRows.innerHTML = `<tr><td colspan="5">Nenhuma alergia cadastrada.</td></tr>`;
         return;
       }
 
@@ -332,9 +372,9 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td><button class="btn ${a.active ? "primary" : ""}" data-toggle="${a.id}">${a.active ? "Ativa" : "Inativa"}</button></td>
-          <td>${escapeHtml(a.label || "")}</td>
-          <td>${escapeHtml((a.startedAt || "").slice(0,10) || "—")}</td>
-          <td>${escapeHtml(a.notes || "")}</td>
+          <td>${esc(a.label)}</td>
+          <td>${esc((a.startedAt||"").slice(0,10) || "—")}</td>
+          <td>${esc(a.notes||"")}</td>
           <td><button class="btn danger" data-del="${a.id}">Remover</button></td>
         `;
         allergyRows.appendChild(tr);
@@ -342,12 +382,10 @@
 
       allergyRows.querySelectorAll("[data-toggle]").forEach(btn=>{
         btn.addEventListener("click", ()=>{
-          const aid = btn.getAttribute("data-toggle");
-          const a = current.allergies.find(x => x.id === aid);
+          const a = current.allergies.find(x => x.id === btn.getAttribute("data-toggle"));
           if (!a) return;
           a.active = !a.active;
-          persist();
-          renderAllergies();
+          persist(); renderAllergies();
         });
       });
 
@@ -356,25 +394,33 @@
           const aid = btn.getAttribute("data-del");
           if (!confirm("Remover este item?")) return;
           current.allergies = current.allergies.filter(x => x.id !== aid);
-          persist();
-          renderAllergies();
+          persist(); renderAllergies();
         });
       });
     }
 
     function loadCurrent(){
-      const list = loadProfiles();
+      const list = loadPersons();
       current = id ? list.find(p => p.id === id) : null;
 
       if (!current){
-        current = { id: uid("p"), name:"", birthDate:"", role:"membro", neuro:{base:[],layers:[],combinations:[]}, allergies:[], notes:"", createdAt: nowIso(), updatedAt: nowIso() };
-        title.textContent = "Novo perfil";
+        current = {
+          id: uid("p"),
+          name: "",
+          birthDate: "",
+          role: "membro",
+          notes: "",
+          neuroProfile: { overall: "nao_informado", base: [], layers: [], overallNotes: "" },
+          allergies: [],
+          createdAt: nowIso(),
+          updatedAt: nowIso()
+        };
+        title.textContent = "Nova pessoa";
       } else {
-        title.textContent = "Editar perfil";
+        title.textContent = "Editar pessoa";
       }
 
-      current.allergies = Array.isArray(current.allergies) ? current.allergies : [];
-      ensureNeuroShape();
+      ensureShape();
 
       name.value = current.name || "";
       birthDate.value = current.birthDate || "";
@@ -390,31 +436,27 @@
       current.birthDate = birthDate.value;
       current.role = role.value;
       current.notes = notes.value.trim();
-
-      ensureNeuroShape();
-      current.allergies = Array.isArray(current.allergies) ? current.allergies : [];
-
-      current = upsertProfile(current);
+      ensureShape();
+      current = upsertPerson(current);
       return current;
     }
 
     document.getElementById("save").addEventListener("click", ()=>{
       persist();
-      alert("Perfil salvo.");
+      alert("Salvo.");
       history.replaceState(null, "", "./edit.html?id=" + encodeURIComponent(current.id));
-    });
-
-    document.getElementById("setActive").addEventListener("click", ()=>{
-      persist();
-      setActiveProfileId(current.id);
-      alert("Perfil ativo definido.");
     });
 
     document.getElementById("addAllergy").addEventListener("click", ()=>{
       const label = allergyLabel.value.trim();
       if (!label) return alert("Digite o nome da alergia.");
-      const item = { id: uid("a"), label, notes: allergyNotes.value.trim(), startedAt: nowIso(), active: true };
-      current.allergies.unshift(item);
+      current.allergies.unshift({
+        id: uid("a"),
+        label,
+        notes: allergyNotes.value.trim(),
+        startedAt: nowIso(),
+        active: true
+      });
       allergyLabel.value = "";
       allergyNotes.value = "";
       persist();
