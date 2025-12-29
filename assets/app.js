@@ -1,9 +1,9 @@
 // NeuroNexus — storage + utilitários (sem backend)
 
 export const KEYS = {
-  HOUSE: "neuronexus.houseState.v2",
+  // House agora será por clã: neuronexus.houseState.v2:<clanId>
+  HOUSE_BASE: "neuronexus.houseState.v2",
 
-  // NOVO: separação Pessoa x Clã x Vínculos
   PERSONS: "neuronexus.persons.v1",
   CLANS: "neuronexus.clans.v1",
   MEMBERSHIPS: "neuronexus.memberships.v1",
@@ -28,29 +28,34 @@ export function formatWhen(iso){
   try { return new Date(iso).toLocaleString(); } catch { return "—"; }
 }
 
-// ---- HOUSE STATE (B) ----
+// ---- HOUSE STATE (B) por clã ----
 export function normalizeState(state){
   const s = String(state || "").toUpperCase();
   return (s === "GREEN" || s === "YELLOW" || s === "RED") ? s : null;
 }
 
-export function loadHouse(){
-  const raw = localStorage.getItem(KEYS.HOUSE);
+export function houseKey(clanId){
+  const cid = String(clanId || "").trim();
+  return cid ? `${KEYS.HOUSE_BASE}:${cid}` : KEYS.HOUSE_BASE;
+}
+
+export function loadHouse(clanId=""){
+  const raw = localStorage.getItem(houseKey(clanId));
   const parsed = raw ? safeParse(raw) : null;
   if (!parsed || !parsed.state) return null;
   return parsed;
 }
 
-export function saveHouse(state){
+export function saveHouse(state, clanId=""){
   const st = normalizeState(state);
   if (!st) return null;
   const payload = { state: st, updatedAt: nowIso() };
-  localStorage.setItem(KEYS.HOUSE, JSON.stringify(payload));
+  localStorage.setItem(houseKey(clanId), JSON.stringify(payload));
   return payload;
 }
 
-export function clearHouse(){
-  localStorage.removeItem(KEYS.HOUSE);
+export function clearHouse(clanId=""){
+  localStorage.removeItem(houseKey(clanId));
 }
 
 // ---- CLÃS ----
@@ -95,6 +100,9 @@ export function deleteClan(id){
   const ms = loadMemberships().filter(m => m.clanId !== id);
   saveMemberships(ms);
 
+  // remove house desse clã
+  clearHouse(id);
+
   if (loadActiveClanId() === id) {
     const next = list[0]?.id || "";
     if (next) setActiveClanId(next);
@@ -109,30 +117,16 @@ export function setActiveClanId(id){
   localStorage.setItem(KEYS.ACTIVE_CLAN, id);
 }
 
-// ---- PESSOAS (perfil único, reutilizável em vários clãs) ----
+// ---- PESSOAS ----
 export function defaultPerson(){
   return {
     id: uid("p"),
-
-    // FIXOS
     name: "",
-    birthDate: "", // YYYY-MM-DD
-    role: "membro", // papel geral (pode ser refinado por clã depois)
+    birthDate: "",
+    role: "membro",
     notes: "",
-
-    // Neuroperfil (sem "desde" em data)
-    neuroProfile: {
-      // um "meta" simples para neurotípico x neurodivergente x não informado
-      overall: "nao_informado", // "neurotipico" | "neurodivergente" | "nao_informado"
-
-      // base e camadas. Cada item: {key,label,status,detect,notes,group?}
-      base: [],
-      layers: []
-    },
-
-    // SEMIPERMANENTES (já)
-    allergies: [], // {id,label,startedAt,active,notes}
-
+    neuroProfile: { overall: "nao_informado", base: [], layers: [], overallNotes: "" },
+    allergies: [],
     createdAt: nowIso(),
     updatedAt: nowIso()
   };
@@ -152,11 +146,11 @@ export function upsertPerson(person){
   const list = loadPersons();
   const p = { ...defaultPerson(), ...person, updatedAt: nowIso() };
 
-  // upgrade-safe: garante shape
-  p.neuroProfile = p.neuroProfile || { overall: "nao_informado", base: [], layers: [] };
+  p.neuroProfile = p.neuroProfile || { overall: "nao_informado", base: [], layers: [], overallNotes: "" };
   p.neuroProfile.overall = p.neuroProfile.overall || "nao_informado";
   p.neuroProfile.base = Array.isArray(p.neuroProfile.base) ? p.neuroProfile.base : [];
   p.neuroProfile.layers = Array.isArray(p.neuroProfile.layers) ? p.neuroProfile.layers : [];
+  p.neuroProfile.overallNotes = p.neuroProfile.overallNotes || "";
   p.allergies = Array.isArray(p.allergies) ? p.allergies : [];
 
   const idx = list.findIndex(x => x.id === p.id);
@@ -171,7 +165,6 @@ export function deletePerson(id){
   const list = loadPersons().filter(p => p.id !== id);
   savePersons(list);
 
-  // remove vínculos dessa pessoa
   const ms = loadMemberships().filter(m => m.personId !== id);
   saveMemberships(ms);
 
@@ -189,13 +182,13 @@ export function setActivePersonId(id){
   localStorage.setItem(KEYS.ACTIVE_PERSON, id);
 }
 
-// ---- VÍNCULOS Pessoa ↔ Clã ----
+// ---- VÍNCULOS ----
 export function defaultMembership(){
   return {
     id: uid("m"),
     clanId: "",
     personId: "",
-    roleInClan: "", // opcional: mãe, avó, filho, etc.
+    roleInClan: "",
     createdAt: nowIso()
   };
 }
@@ -235,11 +228,11 @@ export function membersOfClan(clanId){
   return ms.map(m => ({ membership: m, person: byId.get(m.personId) })).filter(x => !!x.person);
 }
 
-// ---- EVENTS (A) permanece para depois ----
+// ---- EVENTS (para depois) ----
 export function defaultEvent(){
   return {
     id: uid("e"),
-    scope: "clan", // "clan" | "person"
+    scope: "clan",
     clanId: "",
     personId: "",
     type: "crise",
