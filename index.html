@@ -60,29 +60,32 @@
       </div>
 
       <p class="hint" style="margin-top:10px">
-        Acessibilidade: além de cor, cada estado tem uma “estampa” (pontilhado / listras / hatch) + texto + ícone.
+        Acessibilidade: além de cor, cada estado tem “estampa” (pontilhado / listras / hatch) + texto + ícone.
         Atalhos: 1 (Verde), 2 (Amarelo), 3 (Vermelho).
       </p>
 
       <p class="hint">
-        Este MVP salva apenas no seu navegador (LocalStorage). Nada é enviado para lugar nenhum.
+        Este MVP salva no seu navegador (LocalStorage). Enquanto você não cria um Clã, o estado fica em “Sem clã”.
+        Depois, ele passa a funcionar por Clã automaticamente.
       </p>
     </section>
 
     <section class="card" style="margin-top:16px">
       <h2 style="margin:0">Do semáforo para a evidência</h2>
       <p style="margin:8px 0 0" class="small">
-        Você está certa: às vezes a gente não “define” o estado — a gente <strong>descobre</strong>.
-        Próximo passo: um painel de sinais observáveis (sono, ingestão, dor, estímulo, rotinas quebradas, episódios com timestamp)
+        Às vezes a gente não “define” o estado — a gente <strong>descobre</strong>.
+        Próximo passo: sinais observáveis (sono, ingestão, dor, estímulo, rotina, episódios com timestamp)
         para sugerir o estado com base em evidências.
       </p>
     </section>
   </main>
 
   <script type="module">
-    import { loadClans, loadActiveClanId, setActiveClanId, loadHouse, saveHouse, clearHouse, formatWhen } from "./assets/app.js";
+    import {
+      loadClans, loadActiveClanId, setActiveClanId,
+      loadHouse, saveHouse, clearHouse, formatWhen
+    } from "./assets/app.js";
 
-    const sub = document.getElementById("sub");
     const updated = document.getElementById("updated");
     const badge = document.getElementById("badge");
     const label = document.getElementById("label");
@@ -92,20 +95,6 @@
     const btnY = document.getElementById("yellow");
     const btnR = document.getElementById("red");
     const btnC = document.getElementById("clear");
-
-    function resolveClan(){
-      const clans = loadClans();
-      if (!clans.length){
-        sub.textContent = "Nenhum Clã criado ainda — vá em Clãs";
-        clanName.textContent = "Clã: —";
-        return { id:"", name:"—" };
-      }
-      const activeId = loadActiveClanId() || clans[0].id;
-      const c = clans.find(x => x.id === activeId) || clans[0];
-      setActiveClanId(c.id);
-      clanName.textContent = "Clã: " + (c.name || "Sem nome");
-      return { id: c.id, name: c.name || "Sem nome" };
-    }
 
     function applyState(state){
       // fundo do site
@@ -120,15 +109,23 @@
                         : "—";
     }
 
+    function resolveClan(){
+      const clans = loadClans();
+      if (!clans.length){
+        clanName.textContent = "Clã: Sem clã";
+        return { id:"", name:"Sem clã" };
+      }
+      const activeId = loadActiveClanId() || clans[0].id;
+      const c = clans.find(x => x.id === activeId) || clans[0];
+      setActiveClanId(c.id);
+      clanName.textContent = "Clã: " + (c.name || "Sem nome");
+      return { id: c.id, name: c.name || "Sem nome" };
+    }
+
     function render(){
       const clan = resolveClan();
-      const h = clan.id ? loadHouse(clan.id) : null;
-
-      if (!clan.id){
-        applyState(null);
-        updated.textContent = "Crie um Clã para salvar estados.";
-        return;
-      }
+      // fallback: se não há clã, usa storage “global” (sem clanId)
+      const h = loadHouse(clan.id);
 
       if (!h){
         applyState(null);
@@ -142,7 +139,7 @@
 
     function setState(s){
       const clan = resolveClan();
-      if (!clan.id) return alert("Crie um Clã primeiro (Clãs).");
+      // permite salvar mesmo sem clã (id vazio)
       saveHouse(s, clan.id);
       render();
     }
@@ -153,7 +150,6 @@
 
     btnC.addEventListener("click", ()=>{
       const clan = resolveClan();
-      if (!clan.id) return;
       clearHouse(clan.id);
       render();
     });
