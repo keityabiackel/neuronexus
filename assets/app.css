@@ -235,3 +235,63 @@ body[data-state="NONE"]{
       rgba(0,0,0,0) 14px
   );
 }
+/* ===== PROFILES: desktop = tabela | mobile = cartões ===== */
+
+.profilesTableWrap { width: 100%; }
+
+/* cards ficam escondidos no desktop */
+.profilesCards{
+  display:none;
+  margin-top:12px;
+  gap:12px;
+}
+
+.profileCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:16px;
+  padding:14px;
+  box-shadow:0 10px 24px rgba(0,0,0,.08);
+}
+
+.profileCardTitle{
+  font-weight:800;
+  font-size:18px;
+  line-height:1.1;
+}
+
+.profileCardMeta{
+  margin-top:10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.06);
+  font-size:13px;
+}
+
+.profileCardActions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+}
+
+/* Mobile retrato: esconde tabela e mostra cards */
+@media (max-width: 720px){
+  .profilesTableWrap{ display:none; }
+  .profilesCards{ display:grid; }
+}
+
+/* opcional: uma dica amigável quando não tem nada */
+.emptyHint{
+  padding:12px 14px;
+  border-radius:12px;
+  background:rgba(0,0,0,.04);
+}
