@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Membros do Clã · NeuroNexus</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../assets/app.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="header">
+      <div class="brandline">
+        <div class="logo">
+          <img src="../assets/logo.png" alt="Logo NeuroNexus" />
+        </div>
+        <div class="brandtext">
+          <h1>NEURONEXUS</h1>
+          <p id="subtitle">Gerenciar membros</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="btn" href="./index.html">⬅ Clãs</a>
+        <a class="btn" href="../profiles/index.html">👥 Membros do Clã</a>
+      </nav>
+    </header>
+
+    <section class="card">
+      <h2 style="margin:0">Vínculos Pessoa ↔ Clã</h2>
+      <p class="small" style="margin:6px 0 0">
+        Marque quem pertence ao Clã selecionado. A pessoa continua única e reutilizável em outros Clãs.
+      </p>
+
+      <div class="row" style="margin-top:12px">
+        <div class="field" style="flex:1; min-width:260px">
+          <label for="search">Buscar pessoa</label>
+          <input id="search" placeholder="Digite um nome..." />
+        </div>
+        <a class="btn primary" href="../profiles/edit.html">+ Criar pessoa</a>
+      </div>
+
+      <table class="table" style="margin-top:12px">
+        <thead>
+          <tr>
+            <th style="width:120px">No Clã</th>
+            <th>Nome</th>
+            <th style="width:140px">Papel</th>
+            <th style="width:220px">Observação</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+
+      <p class="hint" id="hint"></p>
+    </section>
+  </main>
+
+  <script type="module">
+    import {
+      loadClans, loadActiveClanId, setActiveClanId,
+      loadPersons,
+      isMember, addMembership, removeMembership
+    } from "../assets/app.js";
+
+    const subtitle = document.getElementById("subtitle");
+    const rows = document.getElementById("rows");
+    const hint = document.getElementById("hint");
+    const search = document.getElementById("search");
+
+    const params = new URLSearchParams(location.search);
+    let clanId = params.get("clanId") || loadActiveClanId();
+
+    function escapeHtml(str){
+      return String(str || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function resolveClan(){
+      const clans = loadClans();
+      if (!clans.length){
+        subtitle.textContent = "Nenhum Clã criado ainda.";
+        hint.textContent = "Crie um Clã primeiro.";
+        return null;
+      }
+      if (!clanId) clanId = loadActiveClanId() || clans[0].id;
+      const c = clans.find(x => x.id === clanId) || clans[0];
+      clanId = c.id;
+      setActiveClanId(clanId);
+      subtitle.textContent = `Clã: ${c.name || "Sem nome"}`;
+      return c;
+    }
+
+    function render(){
+      const c = resolveClan();
+      if (!c) return;
+
+      const q = (search.value || "").trim().toLowerCase();
+      let persons = loadPersons();
+      persons.sort((a,b)=> String(a.name||"").localeCompare(String(b.name||""), "pt-BR"));
+
+      if (q){
+        persons = persons.filter(p => String(p.name||"").toLowerCase().includes(q));
+      }
+
+      rows.innerHTML = "";
+
+      if (!persons.length){
+        rows.innerHTML = `<tr><td colspan="4">Nenhuma pessoa encontrada.</td></tr>`;
+        hint.textContent = "Crie uma pessoa e depois vincule ao Clã.";
+        return;
+      }
+
+      for (const p of persons){
+        const member = isMember(clanId, p.id);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            <button class="btn ${member ? "primary" : ""}" data-toggle="${p.id}">
+              ${member ? "No Clã" : "Adicionar"}
+            </button>
+          </td>
+          <td><strong>${escapeHtml(p.name || "Sem nome")}</strong></td>
+          <td>${escapeHtml(p.role || "—")}</td>
+          <td>${escapeHtml((p.notes || "").slice(0,80) || "—")}</td>
+        `;
+        rows.appendChild(tr);
+      }
+
+      rows.querySelectorAll("[data-toggle]").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const personId = btn.getAttribute("data-toggle");
+          const member = isMember(clanId, personId);
+          if (member) removeMembership(clanId, personId);
+          else addMembership(clanId, personId);
+          render();
+        });
+      });
+
+      hint.textContent = "O cadastro da pessoa é único. Aqui você só controla participação no Clã.";
+    }
+
+    search.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>
