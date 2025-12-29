@@ -1,155 +1,81 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Membros do Clã · NeuroNexus</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="../assets/app.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pessoas · NeuroNexus</title>
+<link rel="stylesheet" href="../assets/app.css" />
 </head>
 <body>
-  <main class="wrap">
-    <header class="header">
-      <div class="brandline">
-        <div class="logo">
-          <img src="../assets/logo.png" alt="Logo NeuroNexus" />
-        </div>
-        <div class="brandtext">
-          <h1>NEURONEXUS</h1>
-          <p id="sub">Membros do Clã</p>
-        </div>
+<main class="wrap">
+  <header class="header">
+    <div class="brandline">
+      <div class="brandtext">
+        <h1>NEURONEXUS</h1>
+        <p>Pessoas · perfis únicos</p>
       </div>
+    </div>
+    <nav class="nav">
+      <a class="btn" href="../index.html">🏠 Estado da Casa</a>
+      <a class="btn" href="../clans/index.html">🏡 Clãs</a>
+      <a class="btn primary" href="./edit.html">➕ Novo perfil</a>
+    </nav>
+  </header>
 
-      <nav class="nav">
-        <a class="btn" href="../index.html">🏠 Estado da Casa</a>
-        <a class="btn" href="../clans/index.html">🏡 Clãs</a>
-        <a class="btn primary" href="./edit.html">+ Criar pessoa</a>
-      </nav>
-    </header>
+  <section class="card">
+    <h2>Perfis cadastrados</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Nascimento</th>
+          <th>Neurotipo-base</th>
+          <th>Atualizado</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="small">Dica: uma pessoa pode participar de vários clãs sem recadastrar.</p>
+  </section>
+</main>
 
-    <section class="card">
-      <div class="topbar" style="margin-bottom:6px">
-        <div class="brand">
-          <h2 style="margin:0">Membros do Clã</h2>
-          <p style="margin:6px 0 0" id="desc">
-            Selecione um Clã e veja quem está vinculado a ele. (Pessoa pode participar de vários Clãs.)
-          </p>
-        </div>
-      </div>
+<script type="module">
+import { loadPersons, deletePerson } from "../assets/app.js";
 
-      <div class="row" style="margin: 10px 0 12px">
-        <div class="field" style="flex:1; min-width:260px">
-          <label for="filter">Buscar</label>
-          <input id="filter" placeholder="Digite um nome..." />
-        </div>
-        <a class="btn" id="manage" href="../clans/members.html">Gerenciar vínculos</a>
-      </div>
+const rows = document.getElementById("rows");
+const persons = loadPersons();
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th style="width:140px">Papel</th>
-            <th style="width:150px">Nascimento</th>
-            <th style="width:220px">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
+function baseLabel(p){
+  const arr = (p.neuro?.baseTypes || []).slice();
+  if(!arr.length) return "—";
+  return arr.join(", ");
+}
 
-      <p class="hint" id="hint"></p>
-    </section>
-  </main>
+rows.innerHTML = "";
+persons.forEach(p=>{
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${p.name || "—"}</td>
+    <td>${p.birthDate || "—"}</td>
+    <td>${baseLabel(p)}</td>
+    <td>${(p.updatedAt || "—").replace("T"," ").slice(0,19)}</td>
+    <td class="actions">
+      <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
+      <button class="btn danger" data-del="${p.id}">Excluir</button>
+    </td>
+  `;
+  rows.appendChild(tr);
+});
 
-  <script type="module">
-    import {
-      loadClans, loadActiveClanId, setActiveClanId,
-      membersOfClan
-    } from "../assets/app.js";
-
-    const sub = document.getElementById("sub");
-    const manage = document.getElementById("manage");
-    const rows = document.getElementById("rows");
-    const hint = document.getElementById("hint");
-    const filter = document.getElementById("filter");
-
-    function fmtDate(ymd){
-      if (!ymd) return "—";
-      try{
-        const [y,m,d] = ymd.split("-").map(Number);
-        if (!y || !m || !d) return ymd;
-        return String(d).padStart(2,"0") + "/" + String(m).padStart(2,"0") + "/" + y;
-      }catch{ return ymd; }
+document.querySelectorAll("[data-del]").forEach(b=>{
+  b.onclick = ()=>{
+    if(confirm("Excluir esta pessoa? (isso remove ela de todos os clãs)")){
+      deletePerson(b.dataset.del);
+      location.reload();
     }
-
-    function escapeHtml(str){
-      return String(str || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    function resolveClan(){
-      const clans = loadClans();
-      if (!clans.length){
-        sub.textContent = "Nenhum Clã criado";
-        manage.href = "../clans/index.html";
-        rows.innerHTML = `<tr><td colspan="4">Crie um Clã primeiro.</td></tr>`;
-        hint.textContent = "Vá em “Clãs” e crie pelo menos um.";
-        return null;
-      }
-      const activeId = loadActiveClanId() || clans[0].id;
-      const c = clans.find(x => x.id === activeId) || clans[0];
-      setActiveClanId(c.id);
-      sub.textContent = `Clã: ${c.name || "Sem nome"}`;
-      manage.href = `../clans/members.html?clanId=${encodeURIComponent(c.id)}`;
-      return c;
-    }
-
-    function render(){
-      const c = resolveClan();
-      if (!c) return;
-
-      const q = (filter.value || "").trim().toLowerCase();
-      let items = membersOfClan(c.id).map(x => x.person);
-
-      if (q){
-        items = items.filter(p => String(p.name||"").toLowerCase().includes(q));
-      }
-
-      items.sort((a,b)=> String(a.name||"").localeCompare(String(b.name||""), "pt-BR"));
-
-      rows.innerHTML = "";
-      if (!items.length){
-        rows.innerHTML = `<tr><td colspan="4">Nenhum membro vinculado a este Clã.</td></tr>`;
-        hint.textContent = "Use “Gerenciar vínculos” para adicionar pessoas ao Clã.";
-        return;
-      }
-
-      for (const p of items){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${escapeHtml(p.name || "Sem nome")}</strong></td>
-          <td>${escapeHtml(p.role || "—")}</td>
-          <td>${escapeHtml(fmtDate(p.birthDate || ""))}</td>
-          <td class="row" style="gap:8px">
-            <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
-          </td>
-        `;
-        rows.appendChild(tr);
-      }
-
-      hint.textContent = "Perfis são únicos. O Clã define apenas quem participa.";
-    }
-
-    filter.addEventListener("input", render);
-    render();
-  </script>
+  };
+});
+</script>
 </body>
 </html>
