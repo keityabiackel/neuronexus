@@ -332,3 +332,14 @@ h4{
 .table td.actions{
   white-space: nowrap;
 }
+.btnRow{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.btnRow.two > *{
+  flex:1 1 260px; /* cresce igual, respeita min */
+  text-align:center;
+}
