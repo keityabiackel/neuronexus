@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Membros do Clã · NeuroNexus</title>
 
-  <!-- Fontes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
@@ -21,13 +20,14 @@
         </div>
         <div class="brandtext">
           <h1>NEURONEXUS</h1>
-          <p>Membros do Clã · perfis locais (sem backend)</p>
+          <p id="sub">Membros do Clã</p>
         </div>
       </div>
 
       <nav class="nav">
         <a class="btn" href="../index.html">🏠 Estado da Casa</a>
-        <a class="btn primary" href="./edit.html">+ Novo membro</a>
+        <a class="btn" href="../clans/index.html">🏡 Clãs</a>
+        <a class="btn primary" href="./edit.html">+ Criar pessoa</a>
       </nav>
     </header>
 
@@ -35,31 +35,23 @@
       <div class="topbar" style="margin-bottom:6px">
         <div class="brand">
           <h2 style="margin:0">Membros do Clã</h2>
-          <p style="margin:6px 0 0">
-            Perfis fixos e semipermanentes (neurotipos, alergias, notas). Crises e episódios ficam no histórico (fase seguinte).
+          <p style="margin:6px 0 0" id="desc">
+            Selecione um Clã e veja quem está vinculado a ele. (Pessoa pode participar de vários Clãs.)
           </p>
         </div>
       </div>
 
       <div class="row" style="margin: 10px 0 12px">
-        <div class="field" style="flex:1; min-width:240px">
+        <div class="field" style="flex:1; min-width:260px">
           <label for="filter">Buscar</label>
           <input id="filter" placeholder="Digite um nome..." />
         </div>
-        <div class="field" style="min-width:220px">
-          <label for="sort">Ordenar</label>
-          <select id="sort">
-            <option value="activeFirst">Ativo primeiro</option>
-            <option value="nameAZ">Nome (A–Z)</option>
-            <option value="recent">Atualizado recente</option>
-          </select>
-        </div>
+        <a class="btn" id="manage" href="../clans/members.html">Gerenciar vínculos</a>
       </div>
 
       <table class="table">
         <thead>
           <tr>
-            <th style="width:120px">Status</th>
             <th>Nome</th>
             <th style="width:140px">Papel</th>
             <th style="width:150px">Nascimento</th>
@@ -75,14 +67,15 @@
 
   <script type="module">
     import {
-      loadProfiles, deleteProfile,
-      loadActiveProfileId, setActiveProfileId
+      loadClans, loadActiveClanId, setActiveClanId,
+      membersOfClan
     } from "../assets/app.js";
 
+    const sub = document.getElementById("sub");
+    const manage = document.getElementById("manage");
     const rows = document.getElementById("rows");
     const hint = document.getElementById("hint");
     const filter = document.getElementById("filter");
-    const sort = document.getElementById("sort");
 
     function fmtDate(ymd){
       if (!ymd) return "—";
@@ -90,9 +83,7 @@
         const [y,m,d] = ymd.split("-").map(Number);
         if (!y || !m || !d) return ymd;
         return String(d).padStart(2,"0") + "/" + String(m).padStart(2,"0") + "/" + y;
-      }catch{
-        return ymd;
-      }
+      }catch{ return ymd; }
     }
 
     function escapeHtml(str){
@@ -104,89 +95,60 @@
         .replaceAll("'","&#039;");
     }
 
-    function getList(){
-      const activeId = loadActiveProfileId();
-      const q = (filter.value || "").trim().toLowerCase();
-      let list = loadProfiles();
-
-      if (q){
-        list = list.filter(p => String(p.name || "").toLowerCase().includes(q));
+    function resolveClan(){
+      const clans = loadClans();
+      if (!clans.length){
+        sub.textContent = "Nenhum Clã criado";
+        manage.href = "../clans/index.html";
+        rows.innerHTML = `<tr><td colspan="4">Crie um Clã primeiro.</td></tr>`;
+        hint.textContent = "Vá em “Clãs” e crie pelo menos um.";
+        return null;
       }
-
-      const mode = sort.value;
-      if (mode === "nameAZ"){
-        list.sort((a,b)=> String(a.name||"").localeCompare(String(b.name||""), "pt-BR"));
-      } else if (mode === "recent"){
-        list.sort((a,b)=> String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
-      } else { // activeFirst
-        list.sort((a,b)=>{
-          const ax = a.id === activeId ? 0 : 1;
-          const bx = b.id === activeId ? 0 : 1;
-          if (ax !== bx) return ax - bx;
-          return String(a.name||"").localeCompare(String(b.name||""), "pt-BR");
-        });
-      }
-
-      return { list, activeId };
+      const activeId = loadActiveClanId() || clans[0].id;
+      const c = clans.find(x => x.id === activeId) || clans[0];
+      setActiveClanId(c.id);
+      sub.textContent = `Clã: ${c.name || "Sem nome"}`;
+      manage.href = `../clans/members.html?clanId=${encodeURIComponent(c.id)}`;
+      return c;
     }
 
     function render(){
-      const { list, activeId } = getList();
-      rows.innerHTML = "";
+      const c = resolveClan();
+      if (!c) return;
 
-      if (!list.length){
-        rows.innerHTML = `<tr><td colspan="5">Nenhum membro encontrado.</td></tr>`;
-        hint.textContent = "Dica: crie um perfil para cada membro do Clã e defina um deles como ativo.";
+      const q = (filter.value || "").trim().toLowerCase();
+      let items = membersOfClan(c.id).map(x => x.person);
+
+      if (q){
+        items = items.filter(p => String(p.name||"").toLowerCase().includes(q));
+      }
+
+      items.sort((a,b)=> String(a.name||"").localeCompare(String(b.name||""), "pt-BR"));
+
+      rows.innerHTML = "";
+      if (!items.length){
+        rows.innerHTML = `<tr><td colspan="4">Nenhum membro vinculado a este Clã.</td></tr>`;
+        hint.textContent = "Use “Gerenciar vínculos” para adicionar pessoas ao Clã.";
         return;
       }
 
-      for (const p of list){
-        const isActive = p.id === activeId;
-
+      for (const p of items){
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>
-            <button class="btn ${isActive ? "primary" : ""}" data-active="${p.id}">
-              ${isActive ? "Ativo" : "Definir"}
-            </button>
-          </td>
           <td><strong>${escapeHtml(p.name || "Sem nome")}</strong></td>
           <td>${escapeHtml(p.role || "—")}</td>
           <td>${escapeHtml(fmtDate(p.birthDate || ""))}</td>
           <td class="row" style="gap:8px">
             <a class="btn" href="./edit.html?id=${encodeURIComponent(p.id)}">Editar</a>
-            <button class="btn danger" data-del="${p.id}">Excluir</button>
           </td>
         `;
         rows.appendChild(tr);
       }
 
-      // set active
-      rows.querySelectorAll("[data-active]").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          const id = btn.getAttribute("data-active");
-          setActiveProfileId(id);
-          render();
-        });
-      });
-
-      // delete
-      rows.querySelectorAll("[data-del]").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          const id = btn.getAttribute("data-del");
-          const ok = confirm("Excluir este perfil? Isso remove apenas do seu navegador.");
-          if (!ok) return;
-          deleteProfile(id);
-          render();
-        });
-      });
-
-      hint.textContent = "Tudo fica salvo apenas neste navegador (LocalStorage).";
+      hint.textContent = "Perfis são únicos. O Clã define apenas quem participa.";
     }
 
     filter.addEventListener("input", render);
-    sort.addEventListener("change", render);
-
     render();
   </script>
 </body>
