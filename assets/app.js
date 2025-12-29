@@ -1,11 +1,17 @@
 // NeuroNexus — storage + utilitários (sem backend)
 
 export const KEYS = {
-  HOUSE: "neuronexus.houseState.v1",
-  PROFILES: "neuronexus.profiles.v1",
-  ACTIVE_PROFILE: "neuronexus.profileActiveId.v1",
-  EVENTS: "neuronexus.events.v1",
-  HUB: "neuronexus.hub.v1" // Interno; na UI chamaremos de "Clã"
+  HOUSE: "neuronexus.houseState.v2",
+
+  // NOVO: separação Pessoa x Clã x Vínculos
+  PERSONS: "neuronexus.persons.v1",
+  CLANS: "neuronexus.clans.v1",
+  MEMBERSHIPS: "neuronexus.memberships.v1",
+
+  ACTIVE_PERSON: "neuronexus.activePersonId.v1",
+  ACTIVE_CLAN: "neuronexus.activeClanId.v1",
+
+  EVENTS: "neuronexus.events.v1"
 };
 
 export function nowIso(){ return new Date().toISOString(); }
@@ -20,23 +26,6 @@ export function uid(prefix="id"){
 
 export function formatWhen(iso){
   try { return new Date(iso).toLocaleString(); } catch { return "—"; }
-}
-
-// ---- "Clã" (internamente HUB) ----
-export function defaultHub(){
-  return { hubName: "", adminName: "", updatedAt: nowIso() };
-}
-
-export function loadHub(){
-  const raw = localStorage.getItem(KEYS.HUB);
-  const parsed = raw ? safeParse(raw) : null;
-  return { ...defaultHub(), ...(parsed || {}) };
-}
-
-export function saveHub(hub){
-  const payload = { ...defaultHub(), ...hub, updatedAt: nowIso() };
-  localStorage.setItem(KEYS.HUB, JSON.stringify(payload));
-  return payload;
 }
 
 // ---- HOUSE STATE (B) ----
@@ -64,95 +53,200 @@ export function clearHouse(){
   localStorage.removeItem(KEYS.HOUSE);
 }
 
-// ---- PROFILES ----
-// Perfil = fixos + semipermanentes (inclui mosaico neuro e reações etc. em fases seguintes)
-// Eventos ficam em outra chave (histórico)
-export function defaultProfile(){
+// ---- CLÃS ----
+export function defaultClan(){
+  return {
+    id: uid("c"),
+    name: "",
+    adminName: "",
+    notes: "",
+    createdAt: nowIso(),
+    updatedAt: nowIso()
+  };
+}
+
+export function loadClans(){
+  const raw = localStorage.getItem(KEYS.CLANS);
+  const arr = raw ? safeParse(raw) : null;
+  return Array.isArray(arr) ? arr : [];
+}
+
+export function saveClans(list){
+  localStorage.setItem(KEYS.CLANS, JSON.stringify(list || []));
+}
+
+export function upsertClan(clan){
+  const list = loadClans();
+  const c = { ...defaultClan(), ...clan, updatedAt: nowIso() };
+
+  const idx = list.findIndex(x => x.id === c.id);
+  if (idx >= 0) list[idx] = c;
+  else list.push(c);
+
+  saveClans(list);
+  return c;
+}
+
+export function deleteClan(id){
+  const list = loadClans().filter(c => c.id !== id);
+  saveClans(list);
+
+  // remove vínculos desse clã
+  const ms = loadMemberships().filter(m => m.clanId !== id);
+  saveMemberships(ms);
+
+  if (loadActiveClanId() === id) {
+    const next = list[0]?.id || "";
+    if (next) setActiveClanId(next);
+    else localStorage.removeItem(KEYS.ACTIVE_CLAN);
+  }
+}
+
+export function loadActiveClanId(){
+  return localStorage.getItem(KEYS.ACTIVE_CLAN) || "";
+}
+export function setActiveClanId(id){
+  localStorage.setItem(KEYS.ACTIVE_CLAN, id);
+}
+
+// ---- PESSOAS (perfil único, reutilizável em vários clãs) ----
+export function defaultPerson(){
   return {
     id: uid("p"),
 
     // FIXOS
     name: "",
     birthDate: "", // YYYY-MM-DD
-    role: "membro",
+    role: "membro", // papel geral (pode ser refinado por clã depois)
+    notes: "",
 
-    // 🧠 NEURO (mosaico)
-    neuro: {
-      base: [],         // [{key,label,status,since,notes}]
-      layers: [],       // [{key,label,group,status,since,notes}]
-      combinations: []  // [{key,label,status,since,notes}]
+    // Neuroperfil (sem "desde" em data)
+    neuroProfile: {
+      // um "meta" simples para neurotípico x neurodivergente x não informado
+      overall: "nao_informado", // "neurotipico" | "neurodivergente" | "nao_informado"
+
+      // base e camadas. Cada item: {key,label,status,detect,notes,group?}
+      base: [],
+      layers: []
     },
 
-    // SEMIPERMANENTES (já implementado no MVP atual)
+    // SEMIPERMANENTES (já)
     allergies: [], // {id,label,startedAt,active,notes}
-
-    // notas operacionais gerais
-    notes: "",
 
     createdAt: nowIso(),
     updatedAt: nowIso()
   };
 }
 
-export function loadProfiles(){
-  const raw = localStorage.getItem(KEYS.PROFILES);
+export function loadPersons(){
+  const raw = localStorage.getItem(KEYS.PERSONS);
   const arr = raw ? safeParse(raw) : null;
   return Array.isArray(arr) ? arr : [];
 }
 
-export function saveProfiles(list){
-  localStorage.setItem(KEYS.PROFILES, JSON.stringify(list || []));
+export function savePersons(list){
+  localStorage.setItem(KEYS.PERSONS, JSON.stringify(list || []));
 }
 
-export function loadActiveProfileId(){
-  return localStorage.getItem(KEYS.ACTIVE_PROFILE) || "";
-}
+export function upsertPerson(person){
+  const list = loadPersons();
+  const p = { ...defaultPerson(), ...person, updatedAt: nowIso() };
 
-export function setActiveProfileId(id){
-  localStorage.setItem(KEYS.ACTIVE_PROFILE, id);
-}
-
-export function upsertProfile(profile){
-  const list = loadProfiles();
-  const p = { ...defaultProfile(), ...profile, updatedAt: nowIso() };
-
-  // upgrade-safe: garante forma do neuro
-  p.neuro = p.neuro || { base: [], layers: [], combinations: [] };
-  p.neuro.base = Array.isArray(p.neuro.base) ? p.neuro.base : [];
-  p.neuro.layers = Array.isArray(p.neuro.layers) ? p.neuro.layers : [];
-  p.neuro.combinations = Array.isArray(p.neuro.combinations) ? p.neuro.combinations : [];
+  // upgrade-safe: garante shape
+  p.neuroProfile = p.neuroProfile || { overall: "nao_informado", base: [], layers: [] };
+  p.neuroProfile.overall = p.neuroProfile.overall || "nao_informado";
+  p.neuroProfile.base = Array.isArray(p.neuroProfile.base) ? p.neuroProfile.base : [];
+  p.neuroProfile.layers = Array.isArray(p.neuroProfile.layers) ? p.neuroProfile.layers : [];
+  p.allergies = Array.isArray(p.allergies) ? p.allergies : [];
 
   const idx = list.findIndex(x => x.id === p.id);
   if (idx >= 0) list[idx] = p;
   else list.push(p);
 
-  saveProfiles(list);
+  savePersons(list);
   return p;
 }
 
-export function deleteProfile(id){
-  const list = loadProfiles().filter(p => p.id !== id);
-  saveProfiles(list);
+export function deletePerson(id){
+  const list = loadPersons().filter(p => p.id !== id);
+  savePersons(list);
 
-  if (loadActiveProfileId() === id) {
+  // remove vínculos dessa pessoa
+  const ms = loadMemberships().filter(m => m.personId !== id);
+  saveMemberships(ms);
+
+  if (loadActivePersonId() === id) {
     const next = list[0]?.id || "";
-    if (next) setActiveProfileId(next);
-    else localStorage.removeItem(KEYS.ACTIVE_PROFILE);
+    if (next) setActivePersonId(next);
+    else localStorage.removeItem(KEYS.ACTIVE_PERSON);
   }
 }
 
-// ---- EVENTS (A) ----
-// Eventos podem ser do "Clã" ou de um perfil (membro)
+export function loadActivePersonId(){
+  return localStorage.getItem(KEYS.ACTIVE_PERSON) || "";
+}
+export function setActivePersonId(id){
+  localStorage.setItem(KEYS.ACTIVE_PERSON, id);
+}
+
+// ---- VÍNCULOS Pessoa ↔ Clã ----
+export function defaultMembership(){
+  return {
+    id: uid("m"),
+    clanId: "",
+    personId: "",
+    roleInClan: "", // opcional: mãe, avó, filho, etc.
+    createdAt: nowIso()
+  };
+}
+
+export function loadMemberships(){
+  const raw = localStorage.getItem(KEYS.MEMBERSHIPS);
+  const arr = raw ? safeParse(raw) : null;
+  return Array.isArray(arr) ? arr : [];
+}
+
+export function saveMemberships(list){
+  localStorage.setItem(KEYS.MEMBERSHIPS, JSON.stringify(list || []));
+}
+
+export function isMember(clanId, personId){
+  return loadMemberships().some(m => m.clanId === clanId && m.personId === personId);
+}
+
+export function addMembership(clanId, personId, roleInClan=""){
+  const ms = loadMemberships();
+  if (ms.some(m => m.clanId === clanId && m.personId === personId)) return null;
+  const m = { ...defaultMembership(), clanId, personId, roleInClan };
+  ms.push(m);
+  saveMemberships(ms);
+  return m;
+}
+
+export function removeMembership(clanId, personId){
+  const ms = loadMemberships().filter(m => !(m.clanId === clanId && m.personId === personId));
+  saveMemberships(ms);
+}
+
+export function membersOfClan(clanId){
+  const ms = loadMemberships().filter(m => m.clanId === clanId);
+  const persons = loadPersons();
+  const byId = new Map(persons.map(p => [p.id, p]));
+  return ms.map(m => ({ membership: m, person: byId.get(m.personId) })).filter(x => !!x.person);
+}
+
+// ---- EVENTS (A) permanece para depois ----
 export function defaultEvent(){
   return {
     id: uid("e"),
-    scope: "hub", // "hub" | "profile"
-    profileId: "", // se scope="profile"
-    type: "crise", // crise, sono, escola, saude, rotina...
-    context: "casa", // casa, escola, saude, emergencia
+    scope: "clan", // "clan" | "person"
+    clanId: "",
+    personId: "",
+    type: "crise",
+    context: "casa",
     startedAt: nowIso(),
-    endedAt: "", // vazio = em andamento
-    severity: "", // opcional: leve/moderado/intenso
+    endedAt: "",
+    severity: "",
     notes: "",
     createdAt: nowIso()
   };
@@ -166,17 +260,4 @@ export function loadEvents(){
 
 export function saveEvents(list){
   localStorage.setItem(KEYS.EVENTS, JSON.stringify(list || []));
-}
-
-export function addEvent(ev){
-  const list = loadEvents();
-  const e = { ...defaultEvent(), ...ev };
-  list.push(e);
-  saveEvents(list);
-  return e;
-}
-
-export function deleteEvent(id){
-  const list = loadEvents().filter(e => e.id !== id);
-  saveEvents(list);
 }
