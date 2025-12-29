@@ -1,160 +1,129 @@
-// NeuroNexus — storage + utilitários (sem backend)
+// NeuroNexus — núcleo de dados (LocalStorage only)
 
 export const KEYS = {
-  // House agora será por clã: neuronexus.houseState.v2:<clanId>
-  HOUSE_BASE: "neuronexus.houseState.v2",
-
-  PERSONS: "neuronexus.persons.v1",
+  PERSONS: "neuronexus.persons.v2",
   CLANS: "neuronexus.clans.v1",
   MEMBERSHIPS: "neuronexus.memberships.v1",
-
   ACTIVE_PERSON: "neuronexus.activePersonId.v1",
   ACTIVE_CLAN: "neuronexus.activeClanId.v1",
-
-  EVENTS: "neuronexus.events.v1"
 };
 
 export function nowIso(){ return new Date().toISOString(); }
+export function uid(p="id"){ return `${p}_${Math.random().toString(16).slice(2,8)}_${Date.now().toString(16)}`; }
+function parse(raw){ try{ return JSON.parse(raw);}catch{return null;} }
 
-export function safeParse(raw){
-  try { return JSON.parse(raw); } catch { return null; }
-}
+// =====================
+// TAXONOMIA — v1.0
+// =====================
+export const NEURO_TAXONOMY = {
+  layer1_base: [
+    "neurotipico",
+    "autismo",
+    "tdah",
+    "superdotacao",
+    "tourette",
+    "afantasia",
+    "hipermetafantasia"
+  ],
 
-export function uid(prefix="id"){
-  return `${prefix}_${Math.random().toString(16).slice(2,10)}_${Date.now().toString(16)}`;
-}
+  layer2_profiles: {
+    emocao_self: [
+      "alexitimia",
+      "hiperempatia",
+      "hipoempatia",
+      "dificuldade_reconhecimento_emocional",
+      "dissociacao_leve",
+      "alteracoes_interocepcao"
+    ],
+    sensorial_motor: [
+      "disfuncao_integracao_sensorial",
+      "dispraxia",
+      "tpac_dpac",
+      "hipotonia",
+      "alteracoes_propriocepcao",
+      "tiques",
+      "misofonia_hiperacusia",
+      "fotossensibilidade_fotofobia"
+    ],
+    linguagem: [
+      "dislexia",
+      "disgrafia",
+      "discalculia",
+      "hiperlexia",
+      "disfluencia",
+      "del_pragmatica",
+      "del_formal",
+      "del_semantica",
+      "assimetrias_linguagem"
+    ]
+  },
 
-export function formatWhen(iso){
-  try { return new Date(iso).toLocaleString(); } catch { return "—"; }
-}
+  layer3_neurologic: [
+    "epilepsia",
+    "enxaqueca_cronica",
+    "disturbios_sono",
+    "catatonia_autismo",
+    "sequelas_neurologicas_leves"
+  ],
 
-// ---- HOUSE STATE (B) por clã ----
-export function normalizeState(state){
-  const s = String(state || "").toUpperCase();
-  return (s === "GREEN" || s === "YELLOW" || s === "RED") ? s : null;
-}
+  layer4_psychiatric: [
+    "transtornos_psicoticos",
+    "esquizofrenia",
+    "esquizoafetivo",
+    "delirante",
+    "psicotico_breve",
+    "ansiedade",
+    "toc",
+    "depressao",
+    "transtornos_humor",
+    "burnout_neurodivergente",
+    "transtornos_alimentares_arfid"
+  ]
+};
 
-export function houseKey(clanId){
-  const cid = String(clanId || "").trim();
-  return cid ? `${KEYS.HOUSE_BASE}:${cid}` : KEYS.HOUSE_BASE;
-}
-
-export function loadHouse(clanId=""){
-  const raw = localStorage.getItem(houseKey(clanId));
-  const parsed = raw ? safeParse(raw) : null;
-  if (!parsed || !parsed.state) return null;
-  return parsed;
-}
-
-export function saveHouse(state, clanId=""){
-  const st = normalizeState(state);
-  if (!st) return null;
-  const payload = { state: st, updatedAt: nowIso() };
-  localStorage.setItem(houseKey(clanId), JSON.stringify(payload));
-  return payload;
-}
-
-export function clearHouse(clanId=""){
-  localStorage.removeItem(houseKey(clanId));
-}
-
-// ---- CLÃS ----
-export function defaultClan(){
-  return {
-    id: uid("c"),
-    name: "",
-    adminName: "",
-    notes: "",
-    createdAt: nowIso(),
-    updatedAt: nowIso()
-  };
-}
-
-export function loadClans(){
-  const raw = localStorage.getItem(KEYS.CLANS);
-  const arr = raw ? safeParse(raw) : null;
-  return Array.isArray(arr) ? arr : [];
-}
-
-export function saveClans(list){
-  localStorage.setItem(KEYS.CLANS, JSON.stringify(list || []));
-}
-
-export function upsertClan(clan){
-  const list = loadClans();
-  const c = { ...defaultClan(), ...clan, updatedAt: nowIso() };
-
-  const idx = list.findIndex(x => x.id === c.id);
-  if (idx >= 0) list[idx] = c;
-  else list.push(c);
-
-  saveClans(list);
-  return c;
-}
-
-export function deleteClan(id){
-  const list = loadClans().filter(c => c.id !== id);
-  saveClans(list);
-
-  // remove vínculos desse clã
-  const ms = loadMemberships().filter(m => m.clanId !== id);
-  saveMemberships(ms);
-
-  // remove house desse clã
-  clearHouse(id);
-
-  if (loadActiveClanId() === id) {
-    const next = list[0]?.id || "";
-    if (next) setActiveClanId(next);
-    else localStorage.removeItem(KEYS.ACTIVE_CLAN);
-  }
-}
-
-export function loadActiveClanId(){
-  return localStorage.getItem(KEYS.ACTIVE_CLAN) || "";
-}
-export function setActiveClanId(id){
-  localStorage.setItem(KEYS.ACTIVE_CLAN, id);
-}
-
-// ---- PESSOAS ----
+// =====================
+// MODELOS
+// =====================
 export function defaultPerson(){
   return {
     id: uid("p"),
     name: "",
     birthDate: "",
-    role: "membro",
     notes: "",
-    neuroProfile: { overall: "nao_informado", base: [], layers: [], overallNotes: "" },
-    allergies: [],
+    neuroProfile: {
+      base: "neurotipico", // camada 1
+      baseStatus: "confirmado", // confirmado | suspeita
+      profiles: {},   // camada 2
+      neurologic: [], // camada 3
+      psychiatric: [],// camada 4
+      supportLevel: "nao_informado", // baixo | moderado | alto | flutuante | nao_informado
+      supportContexts: [],
+      observations: ""
+    },
     createdAt: nowIso(),
     updatedAt: nowIso()
   };
 }
 
+// =====================
+// STORAGE — PERSONS
+// =====================
 export function loadPersons(){
   const raw = localStorage.getItem(KEYS.PERSONS);
-  const arr = raw ? safeParse(raw) : null;
+  const arr = raw ? parse(raw) : null;
   return Array.isArray(arr) ? arr : [];
 }
 
 export function savePersons(list){
-  localStorage.setItem(KEYS.PERSONS, JSON.stringify(list || []));
+  localStorage.setItem(KEYS.PERSONS, JSON.stringify(list));
 }
 
 export function upsertPerson(person){
   const list = loadPersons();
   const p = { ...defaultPerson(), ...person, updatedAt: nowIso() };
 
-  p.neuroProfile = p.neuroProfile || { overall: "nao_informado", base: [], layers: [], overallNotes: "" };
-  p.neuroProfile.overall = p.neuroProfile.overall || "nao_informado";
-  p.neuroProfile.base = Array.isArray(p.neuroProfile.base) ? p.neuroProfile.base : [];
-  p.neuroProfile.layers = Array.isArray(p.neuroProfile.layers) ? p.neuroProfile.layers : [];
-  p.neuroProfile.overallNotes = p.neuroProfile.overallNotes || "";
-  p.allergies = Array.isArray(p.allergies) ? p.allergies : [];
-
-  const idx = list.findIndex(x => x.id === p.id);
-  if (idx >= 0) list[idx] = p;
+  const i = list.findIndex(x => x.id === p.id);
+  if (i >= 0) list[i] = p;
   else list.push(p);
 
   savePersons(list);
@@ -164,15 +133,6 @@ export function upsertPerson(person){
 export function deletePerson(id){
   const list = loadPersons().filter(p => p.id !== id);
   savePersons(list);
-
-  const ms = loadMemberships().filter(m => m.personId !== id);
-  saveMemberships(ms);
-
-  if (loadActivePersonId() === id) {
-    const next = list[0]?.id || "";
-    if (next) setActivePersonId(next);
-    else localStorage.removeItem(KEYS.ACTIVE_PERSON);
-  }
 }
 
 export function loadActivePersonId(){
@@ -180,77 +140,4 @@ export function loadActivePersonId(){
 }
 export function setActivePersonId(id){
   localStorage.setItem(KEYS.ACTIVE_PERSON, id);
-}
-
-// ---- VÍNCULOS ----
-export function defaultMembership(){
-  return {
-    id: uid("m"),
-    clanId: "",
-    personId: "",
-    roleInClan: "",
-    createdAt: nowIso()
-  };
-}
-
-export function loadMemberships(){
-  const raw = localStorage.getItem(KEYS.MEMBERSHIPS);
-  const arr = raw ? safeParse(raw) : null;
-  return Array.isArray(arr) ? arr : [];
-}
-
-export function saveMemberships(list){
-  localStorage.setItem(KEYS.MEMBERSHIPS, JSON.stringify(list || []));
-}
-
-export function isMember(clanId, personId){
-  return loadMemberships().some(m => m.clanId === clanId && m.personId === personId);
-}
-
-export function addMembership(clanId, personId, roleInClan=""){
-  const ms = loadMemberships();
-  if (ms.some(m => m.clanId === clanId && m.personId === personId)) return null;
-  const m = { ...defaultMembership(), clanId, personId, roleInClan };
-  ms.push(m);
-  saveMemberships(ms);
-  return m;
-}
-
-export function removeMembership(clanId, personId){
-  const ms = loadMemberships().filter(m => !(m.clanId === clanId && m.personId === personId));
-  saveMemberships(ms);
-}
-
-export function membersOfClan(clanId){
-  const ms = loadMemberships().filter(m => m.clanId === clanId);
-  const persons = loadPersons();
-  const byId = new Map(persons.map(p => [p.id, p]));
-  return ms.map(m => ({ membership: m, person: byId.get(m.personId) })).filter(x => !!x.person);
-}
-
-// ---- EVENTS (para depois) ----
-export function defaultEvent(){
-  return {
-    id: uid("e"),
-    scope: "clan",
-    clanId: "",
-    personId: "",
-    type: "crise",
-    context: "casa",
-    startedAt: nowIso(),
-    endedAt: "",
-    severity: "",
-    notes: "",
-    createdAt: nowIso()
-  };
-}
-
-export function loadEvents(){
-  const raw = localStorage.getItem(KEYS.EVENTS);
-  const arr = raw ? safeParse(raw) : null;
-  return Array.isArray(arr) ? arr : [];
-}
-
-export function saveEvents(list){
-  localStorage.setItem(KEYS.EVENTS, JSON.stringify(list || []));
 }
