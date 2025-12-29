@@ -3,20 +3,34 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Perfil · NeuroNexus</title>
+<title>Editar Perfil · NeuroNexus</title>
 <link rel="stylesheet" href="../assets/app.css" />
 </head>
-
 <body>
+
 <main class="wrap">
+  <header class="header">
+    <div class="brandline">
+      <div class="brandtext">
+        <h1>NEURONEXUS</h1>
+        <p>Perfil · taxonomia v1.0</p>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="btn" href="./index.html">← Voltar</a>
+      <a class="btn" href="../clans/index.html">🏡 Clãs</a>
+      <a class="btn" href="../index.html">🏠 Estado da Casa</a>
+    </nav>
+  </header>
+
   <h2>Perfil Neurodivergente</h2>
 
-  <!-- DADOS BÁSICOS -->
+  <!-- DADOS -->
   <section class="card">
     <div class="grid2">
       <div class="field">
         <label>Nome</label>
-        <input id="name" />
+        <input id="name" placeholder="Ex.: Keity" />
       </div>
       <div class="field">
         <label>Data de nascimento</label>
@@ -27,100 +41,180 @@
 
   <!-- CAMADA 1 -->
   <section class="card">
-    <h3>🧠 Neurotipo-base</h3>
-    <select id="baseType"></select>
+    <h3>🧠 Camada 1 — Neurotipo-base (múltipla seleção)</h3>
+    <div class="gridChecks" id="baseGrid"></div>
 
-    <label>Status</label>
-    <select id="baseStatus">
-      <option value="confirmado">Confirmado</option>
-      <option value="suspeita">Suspeita / Em avaliação</option>
-    </select>
+    <div class="grid2" style="margin-top:12px">
+      <div class="field">
+        <label>Status (geral)</label>
+        <select id="baseStatus">
+          <option value="confirmado">Confirmado</option>
+          <option value="suspeita">Suspeita / Em avaliação</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nível atual de suporte</label>
+        <select id="support">
+          <option value="nao_informado">Não informado</option>
+          <option value="baixo">Baixo</option>
+          <option value="moderado">Moderado</option>
+          <option value="alto">Alto</option>
+          <option value="flutuante">Flutuante</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>Observações funcionais (curtas)</label>
+      <input id="observations" placeholder="Ex.: varia muito por contexto; sensorial alto em mercado" />
+    </div>
   </section>
 
   <!-- CAMADA 2 -->
   <section class="card">
-    <h3>🧩 Perfis neurocognitivos associados</h3>
-    <div id="layer2"></div>
+    <h3>🧩 Camada 2 — Perfis neurocognitivos associados</h3>
+
+    <h4>Emoção, consciência e self</h4>
+    <div class="gridChecks" id="l2a"></div>
+
+    <h4>Sensorial e motor</h4>
+    <div class="gridChecks" id="l2b"></div>
+
+    <h4>Linguagem, leitura e escrita</h4>
+    <div class="gridChecks" id="l2c"></div>
   </section>
 
   <!-- CAMADA 3 -->
   <section class="card">
-    <h3>🧠 Condições neurológicas associadas</h3>
-    <div id="layer3"></div>
+    <h3>🧠 Camada 3 — Condições neurológicas associadas</h3>
+    <div class="gridChecks" id="l3"></div>
   </section>
 
   <!-- CAMADA 4 -->
   <section class="card">
-    <h3>🧠 Condições psiquiátricas associadas</h3>
-    <div id="layer4"></div>
-  </section>
+    <h3>🧠 Camada 4 — Condições psiquiátricas como comorbidade</h3>
+    <h4>Espectro psicótico (como comorbidade)</h4>
+    <div class="gridChecks" id="l4a"></div>
 
-  <!-- SUPORTE -->
-  <section class="card">
-    <h3>Nível atual de suporte</h3>
-    <select id="support">
-      <option value="nao_informado">Não informado</option>
-      <option value="baixo">Baixo</option>
-      <option value="moderado">Moderado</option>
-      <option value="alto">Alto</option>
-      <option value="flutuante">Flutuante</option>
-    </select>
-
-    <label>Observações funcionais</label>
-    <input id="observations" />
+    <h4>Outros transtornos psiquiátricos associados</h4>
+    <div class="gridChecks" id="l4b"></div>
   </section>
 
   <button class="btn primary" id="save">Salvar perfil</button>
 </main>
 
 <script type="module">
-import {
-  NEURO_TAXONOMY,
-  defaultPerson,
-  upsertPerson
-} from "../assets/app.js";
+import { TAXONOMY, defaultPerson, getPerson, upsertPerson } from "../assets/app.js";
 
-const person = defaultPerson();
+const qs = new URLSearchParams(location.search);
+const id = qs.get("id");
 
-const baseSelect = document.getElementById("baseType");
-NEURO_TAXONOMY.layer1_base.forEach(k=>{
-  const o = document.createElement("option");
-  o.value = k;
-  o.textContent = k.replaceAll("_"," ");
-  baseSelect.appendChild(o);
-});
+let person = id ? (getPerson(id) || defaultPerson()) : defaultPerson();
 
-function renderList(container, items){
-  items.forEach(k=>{
-    const label = document.createElement("label");
-    label.innerHTML = `<input type="checkbox" value="${k}"> ${k.replaceAll("_"," ")}`;
-    container.appendChild(label);
+const $ = (id)=>document.getElementById(id);
+
+function addChecks(container, items, selectedKeys){
+  container.innerHTML = "";
+  items.forEach(([key,label])=>{
+    const wrap = document.createElement("label");
+    wrap.className = "check";
+    wrap.innerHTML = `
+      <input type="checkbox" value="${key}">
+      <span>${label}</span>
+    `;
+    const input = wrap.querySelector("input");
+    input.checked = selectedKeys.includes(key);
+    container.appendChild(wrap);
   });
 }
 
-renderList(document.getElementById("layer3"), NEURO_TAXONOMY.layer3_neurologic);
-renderList(document.getElementById("layer4"), NEURO_TAXONOMY.layer4_psychiatric);
+function addBaseChecks(container, baseItems, selectedKeys){
+  container.innerHTML = "";
+  baseItems.forEach(({key,label})=>{
+    const wrap = document.createElement("label");
+    wrap.className = "check";
+    wrap.innerHTML = `
+      <input type="checkbox" value="${key}">
+      <span>${label}</span>
+    `;
+    const input = wrap.querySelector("input");
+    input.checked = selectedKeys.includes(key);
+    container.appendChild(wrap);
+  });
 
-Object.values(NEURO_TAXONOMY.layer2_profiles).forEach(group=>{
-  renderList(document.getElementById("layer2"), group);
-});
+  // Regra: se "neurotipico" for marcado, desmarca os outros automaticamente.
+  container.addEventListener("change", (e)=>{
+    if(e.target && e.target.matches('input[type="checkbox"]')){
+      const all = [...container.querySelectorAll('input[type="checkbox"]')];
+      const nt = all.find(x=>x.value==="neurotipico");
+      if(e.target.value==="neurotipico" && nt.checked){
+        all.forEach(x=>{ if(x.value!=="neurotipico") x.checked=false; });
+      }
+      if(e.target.value!=="neurotipico" && e.target.checked){
+        if(nt) nt.checked=false;
+      }
+    }
+  });
+}
 
-document.getElementById("save").onclick = ()=>{
-  person.name = name.value;
-  person.birthDate = birthDate.value;
-  person.neuroProfile.base = baseType.value;
-  person.neuroProfile.baseStatus = baseStatus.value;
-  person.neuroProfile.supportLevel = support.value;
-  person.neuroProfile.observations = observations.value;
+function readChecked(container){
+  return [...container.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value);
+}
 
-  person.neuroProfile.neurologic =
-    [...document.querySelectorAll("#layer3 input:checked")].map(x=>x.value);
-  person.neuroProfile.psychiatric =
-    [...document.querySelectorAll("#layer4 input:checked")].map(x=>x.value);
+function fill(){
+  $("name").value = person.name || "";
+  $("birthDate").value = person.birthDate || "";
+  $("baseStatus").value = person.neuro.baseStatus || "confirmado";
+  $("support").value = person.neuro.supportLevel || "nao_informado";
+  $("observations").value = person.neuro.observations || "";
+
+  addBaseChecks($("baseGrid"), TAXONOMY.layer1_base, person.neuro.baseTypes || ["neurotipico"]);
+
+  addChecks($("l2a"), TAXONOMY.layer2.emocao_self, person.neuro.layer2 || []);
+  addChecks($("l2b"), TAXONOMY.layer2.sensorial_motor, person.neuro.layer2 || []);
+  addChecks($("l2c"), TAXONOMY.layer2.linguagem, person.neuro.layer2 || []);
+
+  addChecks($("l3"), TAXONOMY.layer3, person.neuro.layer3 || []);
+
+  addChecks($("l4a"), TAXONOMY.layer4.psicoticos, person.neuro.layer4 || []);
+  addChecks($("l4b"), TAXONOMY.layer4.outros, person.neuro.layer4 || []);
+}
+
+$("save").onclick = ()=>{
+  person.name = $("name").value.trim();
+  person.birthDate = $("birthDate").value;
+  person.neuro.baseTypes = readChecked($("baseGrid"));
+  if(!person.neuro.baseTypes.length) person.neuro.baseTypes = ["neurotipico"];
+
+  person.neuro.baseStatus = $("baseStatus").value;
+  person.neuro.supportLevel = $("support").value;
+  person.neuro.observations = $("observations").value.trim();
+
+  const l2 = [
+    ...readChecked($("l2a")),
+    ...readChecked($("l2b")),
+    ...readChecked($("l2c")),
+  ];
+  person.neuro.layer2 = [...new Set(l2)];
+
+  person.neuro.layer3 = readChecked($("l3"));
+
+  const l4 = [
+    ...readChecked($("l4a")),
+    ...readChecked($("l4b")),
+  ];
+  person.neuro.layer4 = [...new Set(l4)];
+
+  if(!person.name){
+    alert("Nome é obrigatório.");
+    return;
+  }
 
   upsertPerson(person);
-  alert("Perfil salvo.");
+  location.href = "./index.html";
 };
+
+fill();
 </script>
 </body>
 </html>
