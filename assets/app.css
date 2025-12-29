@@ -1,136 +1,82 @@
-/* NeuroNexus — base visual */
-
 :root{
-  --bg: #fbf6e5;          /* fallback */
-  --card: rgba(255,255,255,.82);
-  --text: #101828;
-  --muted: #475467;
-  --line: rgba(16,24,40,.12);
+  --ink:#0b136b;
+  --bg:#f6efe2;
+  --card:#ffffff;
+  --muted:#5b6470;
 
-  --brand: #0b1a6b;
-
-  /* Semáforo */
-  --g: #2ea043;
-  --y: #f0b429;
-  --r: #e11d48;
-
-  --shadow: 0 10px 30px rgba(16,24,40,.12);
+  --shadow: 0 12px 30px rgba(0,0,0,.10);
   --radius: 18px;
+
+  /* Estado (default) */
+  --stateName: "—";
+  --stateColor:#c8c8c8;
+  --stateBg:#f6efe2;
+  --statePattern: repeating-linear-gradient(
+      135deg,
+      rgba(0,0,0,.12) 0px,
+      rgba(0,0,0,.12) 6px,
+      rgba(0,0,0,0) 6px,
+      rgba(0,0,0,0) 14px
+  );
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: var(--text);
-
-  /* Fundo padrão + transição suave quando muda estado */
-  background: radial-gradient(1200px 600px at 50% 20%, rgba(11,26,107,.06), transparent 60%),
-              linear-gradient(180deg, #fff, var(--bg));
-  transition: background 260ms ease, filter 260ms ease;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color:#111;
+  background: var(--stateBg);
+  overflow-x:hidden;
 }
 
-/* === FUNDO POR ESTADO (aplicado via body[data-house="..."]) === */
-/* Mantém bonito e informativo sem virar carnaval */
-body[data-house="GREEN"]{
-  background:
-    radial-gradient(1200px 650px at 50% 22%, rgba(46,160,67,.18), transparent 60%),
-    linear-gradient(180deg, #ffffff, #f0fff4);
-}
-body[data-house="YELLOW"]{
-  background:
-    radial-gradient(1200px 650px at 50% 22%, rgba(240,180,41,.22), transparent 60%),
-    linear-gradient(180deg, #ffffff, #fff9e6);
-}
-body[data-house="RED"]{
-  background:
-    radial-gradient(1200px 650px at 50% 22%, rgba(225,29,72,.18), transparent 60%),
-    linear-gradient(180deg, #ffffff, #fff1f2);
-}
-
-/* === PADRÕES (não dependem de cor) === */
-/* Um overlay discreto de “estampa”, tipo Trello: */
-body[data-house="GREEN"]::before,
-body[data-house="YELLOW"]::before,
-body[data-house="RED"]::before{
+/* Fundo com estampa: NÃO pode capturar cliques */
+body::before{
   content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  opacity:.11;
-  mix-blend-mode:multiply;
-}
-
-/* Verde: pontilhado */
-body[data-house="GREEN"]::before{
-  background-image: radial-gradient(circle at 10px 10px, rgba(16,24,40,.55) 1.2px, transparent 1.2px);
-  background-size: 26px 26px;
-}
-
-/* Amarelo: listras diagonais */
-body[data-house="YELLOW"]::before{
-  background-image: repeating-linear-gradient(135deg, rgba(16,24,40,.55) 0 2px, transparent 2px 14px);
-}
-
-/* Vermelho: “hatch” (grade cruzada) */
-body[data-house="RED"]::before{
-  background-image:
-    repeating-linear-gradient(0deg, rgba(16,24,40,.55) 0 2px, transparent 2px 14px),
-    repeating-linear-gradient(90deg, rgba(16,24,40,.55) 0 2px, transparent 2px 14px);
-  background-size: 18px 18px;
+  position: fixed;
+  inset: 0;
+  background-image: var(--statePattern);
+  opacity: .35;
+  pointer-events: none;           /* <- ESSENCIAL */
+  z-index: 0;
 }
 
 .wrap{
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 26px 16px 44px;
+  max-width: 1040px;
+  margin: 28px auto 60px;
+  padding: 0 18px;
+  position: relative;
+  z-index: 1; /* acima do fundo */
 }
 
+/* Header */
 .header{
   display:flex;
-  gap:16px;
   align-items:center;
   justify-content:space-between;
-  flex-wrap:wrap;
-  margin-bottom:16px;
+  gap:16px;
+  margin-bottom: 18px;
 }
-
-.brandline{
-  display:flex;
-  gap:14px;
-  align-items:center;
-}
-
-.logo{
-  width:54px;
-  height:54px;
-  border-radius:14px;
-  background: rgba(255,255,255,.7);
-  box-shadow: var(--shadow);
-  overflow:hidden;
+.brand{
   display:flex;
   align-items:center;
-  justify-content:center;
+  gap:12px;
 }
-.logo img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
+.brand img{
+  width:44px;
+  height:44px;
+  border-radius: 10px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.12);
 }
-
-.brandtext h1{
-  margin:0;
-  font-family: "Roboto Slab", serif;
-  letter-spacing:.15em;
-  font-weight:800;
-  font-size: 20px;
-  color: var(--brand);
+.brand .title{
+  font-weight: 900;
+  letter-spacing: .18em;
+  color: var(--ink);
 }
-.brandtext p{
-  margin:4px 0 0;
+.brand .subtitle{
+  font-size: 12px;
   color: var(--muted);
-  font-size: 13px;
+  margin-top: 2px;
 }
 
 .nav{
@@ -138,208 +84,154 @@ body[data-house="RED"]::before{
   gap:10px;
   flex-wrap:wrap;
 }
-
-.card{
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 18px;
-  backdrop-filter: blur(6px);
-}
-
-.topbar{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.brand h2{
-  margin:0;
-  font-size: 18px;
-}
-.brand p{
-  margin:6px 0 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height:1.35;
-}
-
-.row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-.grid2{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-@media (max-width: 720px){
-  .grid2{ grid-template-columns:1fr; }
-}
-
-.field label{
-  display:block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom:6px;
-}
-.field input, .field select{
-  width:100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,.85);
-  outline: none;
-}
-
 .btn{
+  border:1px solid rgba(11,19,107,.18);
+  background: #fff;
+  color: #111;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration:none;
   display:inline-flex;
   align-items:center;
-  justify-content:center;
   gap:8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,.9);
-  color: var(--text);
-  text-decoration:none;
-  cursor:pointer;
-  font-weight:600;
+  box-shadow: 0 8px 16px rgba(0,0,0,.06);
 }
-.btn:hover{ filter: brightness(.98); }
+.btn:hover{ transform: translateY(-1px); }
+.btn:active{ transform: translateY(0px); }
+
 .btn.primary{
-  background: rgba(11,26,107,.92);
+  background: var(--ink);
   color: #fff;
-  border-color: rgba(11,26,107,.92);
+  border-color: rgba(11,19,107,.25);
 }
 .btn.danger{
-  background: rgba(225,29,72,.10);
-  border-color: rgba(225,29,72,.28);
-  color: #7a1027;
+  background: #ffe6ea;
+  border-color:#ff9fb0;
+  color:#8b1228;
 }
 
-.table{
-  width:100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  overflow:hidden;
-  border-radius: 14px;
+/* Cards */
+.card{
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  margin: 14px 0;
 }
-.table th, .table td{
-  border-bottom: 1px solid var(--line);
-  padding: 10px 10px;
-  font-size: 14px;
+.card h2{
+  margin: 0 0 8px;
+  font-size: 20px;
 }
-.table th{
-  text-align:left;
-  color: var(--muted);
-  font-weight:700;
-  background: rgba(255,255,255,.6);
-}
-
-.hint, .small{
-  color: var(--muted);
+.small{
   font-size: 13px;
+  color: var(--muted);
 }
 
-/* === BADGE do estado com estampa também (não só cor) === */
-.stateBadge{
+/* Estado */
+.stateRow{
   display:flex;
   align-items:center;
-  gap:10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,.72);
-  width: 100%;
   justify-content:space-between;
+  gap:14px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin: 12px 0 10px;
+  background: rgba(255,255,255,.65);
 }
 .stateLeft{
   display:flex;
   align-items:center;
   gap:10px;
+  min-width: 220px;
 }
-.stateIcon{
+.dot{
   width: 12px;
   height: 12px;
-  border-radius: 999px;
-  background: var(--muted);
-  box-shadow: 0 0 0 4px rgba(16,24,40,.06);
+  border-radius: 99px;
+  background: var(--stateColor);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.75);
 }
-.statePattern{
-  width: 46px;
-  height: 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(16,24,40,.15);
-  background: rgba(16,24,40,.06);
-  overflow:hidden;
-  position:relative;
+.stamp{
+  width: 40px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,.18);
+  background-image: var(--statePattern);
+  opacity: .9;
 }
 .stateText{
-  font-weight:800;
-  letter-spacing:.06em;
+  font-weight: 800;
+  letter-spacing: .02em;
 }
-
-.stateBadge[data-s="GREEN"] .stateIcon{ background: var(--g); }
-.stateBadge[data-s="YELLOW"] .stateIcon{ background: var(--y); }
-.stateBadge[data-s="RED"] .stateIcon{ background: var(--r); }
-
-/* padrões dentro do badge */
-.stateBadge[data-s="GREEN"] .statePattern{
-  background-image: radial-gradient(circle at 7px 7px, rgba(16,24,40,.55) 1.2px, transparent 1.2px);
-  background-size: 14px 14px;
+.stateMeta{
+  text-align:right;
+  font-size: 13px;
+  color: var(--muted);
 }
-.stateBadge[data-s="YELLOW"] .statePattern{
-  background-image: repeating-linear-gradient(135deg, rgba(16,24,40,.55) 0 2px, transparent 2px 10px);
-}
-.stateBadge[data-s="RED"] .statePattern{
-  background-image:
-    repeating-linear-gradient(0deg, rgba(16,24,40,.55) 0 2px, transparent 2px 10px),
-    repeating-linear-gradient(90deg, rgba(16,24,40,.55) 0 2px, transparent 2px 10px);
-}
-/* ===== NeuroNexus: layout de checkboxes legível ===== */
-
-.gridChecks{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 10px 14px;
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
   margin-top: 10px;
 }
 
-label.check{
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 12px;
-  background: rgba(255,255,255,.7);
-}
-
-label.check input{
-  margin-top: 3px;
-}
-
-h4{
-  margin: 14px 0 6px;
-}
-
-.table td.actions{
-  white-space: nowrap;
-}
-.btnRow{
+.gridHelp{
   display:flex;
   gap:12px;
+  justify-content:flex-start;
   flex-wrap:wrap;
-  margin-top:12px;
 }
 
-.btnRow.two > *{
-  flex:1 1 260px; /* cresce igual, respeita min */
-  text-align:center;
+/* Acessibilidade / responsivo */
+@media (max-width: 720px){
+  .stateRow{ flex-direction: column; align-items:flex-start; }
+  .stateMeta{ text-align:left; }
+}
+
+/* Mapeamento por estado */
+body[data-state="GREEN"]{
+  --stateName:"VERDE";
+  --stateColor:#58b04b;
+  --stateBg:#eaf6ea;
+  --statePattern: radial-gradient(rgba(0,0,0,.18) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+body[data-state="YELLOW"]{
+  --stateName:"AMARELO";
+  --stateColor:#f0b400;
+  --stateBg:#fbf4df;
+  --statePattern: repeating-linear-gradient(
+    135deg,
+    rgba(0,0,0,.14) 0px,
+    rgba(0,0,0,.14) 5px,
+    rgba(0,0,0,0) 5px,
+    rgba(0,0,0,0) 12px
+  );
+}
+body[data-state="RED"]{
+  --stateName:"VERMELHO";
+  --stateColor:#e04545;
+  --stateBg:#fde9ea;
+  --statePattern: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,.16) 0px,
+    rgba(0,0,0,.16) 3px,
+    rgba(0,0,0,0) 3px,
+    rgba(0,0,0,0) 8px
+  );
+}
+body[data-state="NONE"]{
+  --stateName:"—";
+  --stateColor:#c8c8c8;
+  --stateBg:#f6efe2;
+  --statePattern: repeating-linear-gradient(
+      135deg,
+      rgba(0,0,0,.12) 0px,
+      rgba(0,0,0,.12) 6px,
+      rgba(0,0,0,0) 6px,
+      rgba(0,0,0,0) 14px
+  );
 }
