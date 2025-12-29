@@ -4,164 +4,174 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NeuroNexus · Estado da Casa</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab:wght@700;800&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="./assets/app.css" />
 </head>
+
 <body>
-  <main class="wrap">
-    <header class="header">
-      <div class="brandline">
-        <div class="logo">
-          <img src="./assets/logo.png" alt="Logo NeuroNexus" />
-        </div>
-        <div class="brandtext">
-          <h1>NEURONEXUS</h1>
-          <p id="sub">MVP Fase 0 · sem backend</p>
-        </div>
+<main class="wrap">
+  <header class="header">
+    <div class="brandline">
+      <div class="brandtext">
+        <h1>NEURONEXUS</h1>
+        <p>MVP Fase 0 · sem backend</p>
       </div>
+    </div>
 
-      <nav class="nav">
-        <a class="btn" href="./clans/index.html">🏡 Clãs</a>
-        <a class="btn" href="./profiles/index.html">👥 Membros do Clã</a>
-      </nav>
-    </header>
+    <nav class="nav">
+      <a class="btn" href="./clans/index.html">🏡 Clãs</a>
+      <a class="btn" href="./profiles/index.html">👥 Membros do clã</a>
+    </nav>
+  </header>
 
-    <section class="card">
-      <div class="topbar">
-        <div class="brand">
-          <h2>Estado da Casa</h2>
-          <p>
-            Um indicador compartilhado e acionável do estado do ambiente doméstico.
-            Menos interpretação; mais dados observáveis.
-          </p>
-        </div>
-        <div class="small" id="updated">—</div>
+  <!-- CARD: ESTADO -->
+  <section class="card" id="houseCard">
+    <h2>Estado da Casa</h2>
+    <p class="muted">Um indicador compartilhado e acionável do estado do ambiente doméstico. Menos interpretação; mais dados observáveis.</p>
+
+    <div class="rowBetween">
+      <div class="badgeLine">
+        <span class="dot" id="dot"></span>
+        <span class="stamp" id="stamp">///</span>
+        <strong id="stateText">Estado: —</strong>
       </div>
-
-      <!-- Badge com cor + texto + estampa -->
-      <div class="stateBadge" id="badge" data-s="YELLOW" role="status" aria-live="polite" style="margin:12px 0">
-        <div class="stateLeft">
-          <span class="stateIcon" aria-hidden="true"></span>
-          <span class="statePattern" aria-hidden="true"></span>
-          <span>Estado: <span class="stateText" id="label">—</span></span>
-        </div>
-        <div class="small" id="clanName">Clã: —</div>
+      <div class="small">
+        <div>Atualizado em: <span id="updatedAt">—</span></div>
+        <div>Clã: <span id="clanName">—</span></div>
       </div>
+    </div>
 
-      <div class="row" style="margin-top:10px">
-        <button class="btn" id="green" title="Atalho: 1">🟢 VERDE</button>
-        <button class="btn" id="yellow" title="Atalho: 2">🟡 AMARELO</button>
-        <button class="btn" id="red" title="Atalho: 3">🔴 VERMELHO</button>
-        <button class="btn danger" id="clear">Limpar estado</button>
-      </div>
+    <div class="btnRow">
+      <button class="btn" id="btnGreen">🟢 VERDE</button>
+      <button class="btn" id="btnYellow">🟡 AMARELO</button>
+      <button class="btn" id="btnRed">🔴 VERMELHO</button>
+      <button class="btn danger" id="btnClear">Limpar estado</button>
+    </div>
 
-      <p class="hint" style="margin-top:10px">
-        Acessibilidade: além de cor, cada estado tem “estampa” (pontilhado / listras / hatch) + texto + ícone.
-        Atalhos: 1 (Verde), 2 (Amarelo), 3 (Vermelho).
-      </p>
+    <p class="small">
+      Acessibilidade: além de cor, cada estado tem uma “estampa” (pontilhado / listras / hatch) + texto + ícone.
+      Atalhos: 1 (Verde), 2 (Amarelo), 3 (Vermelho).
+    </p>
 
-      <p class="hint">
-        Este MVP salva no seu navegador (LocalStorage). Enquanto você não cria um Clã, o estado fica em “Sem clã”.
-        Depois, ele passa a funcionar por Clã automaticamente.
-      </p>
-    </section>
+    <p class="small">
+      Este MVP salva no seu navegador (LocalStorage). Enquanto você não cria um Clã, o estado fica em “Sem clã”.
+      Depois, ele passa a funcionar por Clã automaticamente.
+    </p>
+  </section>
 
-    <section class="card" style="margin-top:16px">
-      <h2 style="margin:0">Do semáforo para a evidência</h2>
-      <p style="margin:8px 0 0" class="small">
-        Às vezes a gente não “define” o estado — a gente <strong>descobre</strong>.
-        Próximo passo: sinais observáveis (sono, ingestão, dor, estímulo, rotina, episódios com timestamp)
-        para sugerir o estado com base em evidências.
-      </p>
-    </section>
-  </main>
+  <!-- CARD: EVIDÊNCIA -->
+  <section class="card">
+    <h2>Do semáforo para a evidência</h2>
+    <p class="muted">
+      Às vezes a gente não “define” o estado — a gente <strong>descobre</strong>.
+      Próximo passo: sinais observáveis (sono, ingestão, dor, estímulo, rotina, episódios com timestamp)
+      para sugerir o estado com base em evidências.
+    </p>
+  </section>
 
-  <script type="module">
-    import {
-      loadClans, loadActiveClanId, setActiveClanId,
-      loadHouse, saveHouse, clearHouse, formatWhen
-    } from "./assets/app.js";
+  <!-- NOVO CARD: NÃO ENTENDI NADA -->
+  <section class="card">
+    <h2>Não entendi nada!</h2>
+    <p class="muted">Escolha o nível de ajuda que você quer agora.</p>
 
-    const updated = document.getElementById("updated");
-    const badge = document.getElementById("badge");
-    const label = document.getElementById("label");
-    const clanName = document.getElementById("clanName");
+    <div class="btnRow two">
+      <a class="btn primary" href="./help/resumo.html">me faz um resumo</a>
+      <a class="btn" href="./help/explicacao.html">me explique direito</a>
+    </div>
+  </section>
 
-    const btnG = document.getElementById("green");
-    const btnY = document.getElementById("yellow");
-    const btnR = document.getElementById("red");
-    const btnC = document.getElementById("clear");
+</main>
 
-    function applyState(state){
-      // fundo do site
-      if (state) document.body.setAttribute("data-house", state);
-      else document.body.removeAttribute("data-house");
+<script type="module">
+import {
+  loadClans,
+  loadActiveClanId,
+  setActiveClanId,
+  loadHouse,
+  saveHouse,
+  clearHouse,
+  formatWhen
+} from "./assets/app.js";
 
-      // badge
-      badge.setAttribute("data-s", state || "YELLOW");
-      label.textContent = state === "GREEN" ? "VERDE"
-                        : state === "YELLOW" ? "AMARELO"
-                        : state === "RED" ? "VERMELHO"
-                        : "—";
-    }
+const $ = (id)=>document.getElementById(id);
 
-    function resolveClan(){
-      const clans = loadClans();
-      if (!clans.length){
-        clanName.textContent = "Clã: Sem clã";
-        return { id:"", name:"Sem clã" };
-      }
-      const activeId = loadActiveClanId() || clans[0].id;
-      const c = clans.find(x => x.id === activeId) || clans[0];
-      setActiveClanId(c.id);
-      clanName.textContent = "Clã: " + (c.name || "Sem nome");
-      return { id: c.id, name: c.name || "Sem nome" };
-    }
+function getActiveClan(){
+  const clans = loadClans();
+  if(!clans.length) return null;
 
-    function render(){
-      const clan = resolveClan();
-      // fallback: se não há clã, usa storage “global” (sem clanId)
-      const h = loadHouse(clan.id);
+  let activeId = loadActiveClanId();
+  let active = clans.find(c=>c.id===activeId) || clans[0];
+  setActiveClanId(active.id);
+  return active;
+}
 
-      if (!h){
-        applyState(null);
-        updated.textContent = "Estado ainda não definido.";
-        return;
-      }
+function applyTheme(state){
+  // Estado + estampa (acessível)
+  const body = document.body;
+  body.classList.remove("bg-green","bg-yellow","bg-red","bg-none");
 
-      applyState(h.state);
-      updated.textContent = "Atualizado em: " + formatWhen(h.updatedAt);
-    }
+  const dot = $("dot");
+  const stamp = $("stamp");
 
-    function setState(s){
-      const clan = resolveClan();
-      // permite salvar mesmo sem clã (id vazio)
-      saveHouse(s, clan.id);
-      render();
-    }
+  dot.className = "dot";
+  stamp.textContent = "///";
 
-    btnG.addEventListener("click", ()=> setState("GREEN"));
-    btnY.addEventListener("click", ()=> setState("YELLOW"));
-    btnR.addEventListener("click", ()=> setState("RED"));
+  if(state === "GREEN"){
+    body.classList.add("bg-green");
+    dot.classList.add("green");
+    stamp.textContent = "···";
+  }else if(state === "YELLOW"){
+    body.classList.add("bg-yellow");
+    dot.classList.add("yellow");
+    stamp.textContent = "///";
+  }else if(state === "RED"){
+    body.classList.add("bg-red");
+    dot.classList.add("red");
+    stamp.textContent = "###";
+  }else{
+    body.classList.add("bg-none");
+    dot.classList.add("none");
+    stamp.textContent = "—";
+  }
+}
 
-    btnC.addEventListener("click", ()=>{
-      const clan = resolveClan();
-      clearHouse(clan.id);
-      render();
-    });
+function render(){
+  const active = getActiveClan();
+  const clanId = active ? active.id : "";
+  $("clanName").textContent = active ? active.name : "Sem clã";
 
-    window.addEventListener("keydown", (e)=>{
-      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
-      if (e.key === "1") setState("GREEN");
-      if (e.key === "2") setState("YELLOW");
-      if (e.key === "3") setState("RED");
-    });
+  const h = loadHouse(clanId);
+  const state = h?.state || null;
 
-    render();
-  </script>
+  $("stateText").textContent = `Estado: ${state === "GREEN" ? "VERDE" : state === "YELLOW" ? "AMARELO" : state === "RED" ? "VERMELHO" : "—"}`;
+  $("updatedAt").textContent = h?.updatedAt ? formatWhen(h.updatedAt) : "—";
+
+  applyTheme(state);
+}
+
+function setState(s){
+  const active = getActiveClan();
+  const clanId = active ? active.id : "";
+  saveHouse(s, clanId);
+  render();
+}
+
+$("btnGreen").onclick = ()=>setState("GREEN");
+$("btnYellow").onclick = ()=>setState("YELLOW");
+$("btnRed").onclick = ()=>setState("RED");
+$("btnClear").onclick = ()=>{
+  const active = getActiveClan();
+  const clanId = active ? active.id : "";
+  clearHouse(clanId);
+  render();
+};
+
+document.addEventListener("keydown", (e)=>{
+  if(e.key==="1") setState("GREEN");
+  if(e.key==="2") setState("YELLOW");
+  if(e.key==="3") setState("RED");
+});
+
+render();
+</script>
 </body>
 </html>
