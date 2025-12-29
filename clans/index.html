@@ -22,12 +22,11 @@
     </nav>
   </header>
 
-  <!-- CRIAR CLÃ -->
   <section class="card">
     <h2>Novo Clã</h2>
     <div class="grid2">
       <div class="field">
-        <label>Nome do Clã</label>
+        <label>Nome do clã</label>
         <input id="clanName" placeholder="Ex.: Casa da Mamãe" />
       </div>
       <div class="field">
@@ -35,10 +34,9 @@
         <input id="adminName" placeholder="Ex.: Keity" />
       </div>
     </div>
-    <button class="btn primary" id="createClan">Criar Clã</button>
+    <button class="btn primary" id="create">Criar clã</button>
   </section>
 
-  <!-- LISTA DE CLÃS -->
   <section class="card">
     <h2>Clãs existentes</h2>
     <table class="table">
@@ -50,26 +48,26 @@
           <th>Ações</th>
         </tr>
       </thead>
-      <tbody id="clanRows"></tbody>
+      <tbody id="rows"></tbody>
     </table>
   </section>
 
-  <!-- MEMBROS DO CLÃ ATIVO -->
   <section class="card">
-    <h2>Membros do Clã Ativo</h2>
-    <p class="small" id="activeClanLabel">—</p>
+    <h2>Membros do clã ativo</h2>
+    <p class="small" id="activeLabel">—</p>
 
     <div class="grid2">
       <div>
         <h4>Adicionar pessoa existente</h4>
         <select id="personSelect"></select>
-        <input id="roleInClan" placeholder="Papel no clã (ex.: mãe, filho, tia)" />
-        <button class="btn" id="addMember">Adicionar</button>
+        <input id="role" placeholder="Papel no clã (ex.: mãe, filho, avó)" />
+        <button class="btn" id="add">Adicionar</button>
+        <p class="small">Se a pessoa não existe, crie em <a href="../profiles/index.html">Pessoas</a>.</p>
       </div>
 
       <div>
-        <h4>Membros atuais</h4>
-        <ul id="memberList"></ul>
+        <h4>Membros</h4>
+        <ul id="members"></ul>
       </div>
     </div>
   </section>
@@ -83,43 +81,50 @@ import {
   addMembership, removeMembership, membersOfClan
 } from "../assets/app.js";
 
-const clanRows = document.getElementById("clanRows");
+const rows = document.getElementById("rows");
 const personSelect = document.getElementById("personSelect");
-const memberList = document.getElementById("memberList");
-const activeClanLabel = document.getElementById("activeClanLabel");
+const membersUl = document.getElementById("members");
+const activeLabel = document.getElementById("activeLabel");
+
+function ensureActiveClan(){
+  const clans = loadClans();
+  if(!clans.length) return null;
+  let activeId = loadActiveClanId();
+  let active = clans.find(c=>c.id===activeId) || clans[0];
+  setActiveClanId(active.id);
+  return active;
+}
 
 function renderClans(){
   const clans = loadClans();
   const activeId = loadActiveClanId();
-  clanRows.innerHTML = "";
+  rows.innerHTML = "";
 
   clans.forEach(c=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>
-        <button class="btn ${c.id===activeId?'primary':''}" data-active="${c.id}">
-          ${c.id===activeId?'Ativo':'Ativar'}
-        </button>
-      </td>
-      <td>${c.name}</td>
-      <td>${c.adminName}</td>
+      <td><button class="btn ${c.id===activeId?'primary':''}" data-act="${c.id}">
+        ${c.id===activeId?'Ativo':'Ativar'}
+      </button></td>
+      <td>${c.name || "—"}</td>
+      <td>${c.adminName || "—"}</td>
       <td>
         <button class="btn danger" data-del="${c.id}">Excluir</button>
       </td>
     `;
-    clanRows.appendChild(tr);
+    rows.appendChild(tr);
   });
 
-  document.querySelectorAll("[data-active]").forEach(b=>{
+  document.querySelectorAll("[data-act]").forEach(b=>{
     b.onclick = ()=>{
-      setActiveClanId(b.dataset.active);
+      setActiveClanId(b.dataset.act);
       render();
     };
   });
 
   document.querySelectorAll("[data-del]").forEach(b=>{
     b.onclick = ()=>{
-      if(confirm("Excluir este clã?")){
+      if(confirm("Excluir este clã? (remove vínculos e estado associado)")){
         deleteClan(b.dataset.del);
         render();
       }
@@ -139,55 +144,58 @@ function renderPersons(){
 }
 
 function renderMembers(){
-  const clanId = loadActiveClanId();
-  memberList.innerHTML = "";
-  if(!clanId){
-    activeClanLabel.textContent = "Nenhum clã ativo.";
+  const active = ensureActiveClan();
+  membersUl.innerHTML = "";
+
+  if(!active){
+    activeLabel.textContent = "Nenhum clã cadastrado ainda.";
     return;
   }
+  activeLabel.textContent = `Clã ativo: ${active.name}`;
 
-  const members = membersOfClan(clanId);
-  activeClanLabel.textContent = `Clã ativo: ${loadClans().find(c=>c.id===clanId)?.name}`;
-
-  members.forEach(m=>{
+  const ms = membersOfClan(active.id);
+  ms.forEach(x=>{
     const li = document.createElement("li");
     li.innerHTML = `
-      ${m.person.name} (${m.membership.roleInClan || "—"})
-      <button class="btn danger" data-rm="${m.person.id}">remover</button>
+      ${x.person.name} <span class="small">(${x.membership.roleInClan || "—"})</span>
+      <button class="btn danger" data-rm="${x.person.id}">remover</button>
     `;
-    memberList.appendChild(li);
+    membersUl.appendChild(li);
   });
 
   document.querySelectorAll("[data-rm]").forEach(b=>{
     b.onclick = ()=>{
-      removeMembership(clanId, b.dataset.rm);
+      removeMembership(active.id, b.dataset.rm);
       renderMembers();
     };
   });
 }
 
-document.getElementById("createClan").onclick = ()=>{
+document.getElementById("create").onclick = ()=>{
   const c = defaultClan();
-  c.name = clanName.value.trim();
-  c.adminName = adminName.value.trim();
-  if(!c.name) return alert("Nome do clã é obrigatório");
+  c.name = document.getElementById("clanName").value.trim();
+  c.adminName = document.getElementById("adminName").value.trim();
+  if(!c.name) return alert("Nome do clã é obrigatório.");
   upsertClan(c);
   setActiveClanId(c.id);
-  clanName.value = "";
-  adminName.value = "";
+  document.getElementById("clanName").value = "";
+  document.getElementById("adminName").value = "";
   render();
 };
 
-document.getElementById("addMember").onclick = ()=>{
-  const clanId = loadActiveClanId();
+document.getElementById("add").onclick = ()=>{
+  const active = ensureActiveClan();
   const pid = personSelect.value;
-  if(!clanId || !pid) return;
-  addMembership(clanId, pid, roleInClan.value.trim());
-  roleInClan.value = "";
+  const role = document.getElementById("role").value.trim();
+  if(!active) return alert("Crie um clã primeiro.");
+  if(!pid) return alert("Selecione uma pessoa.");
+  addMembership(active.id, pid, role);
+  document.getElementById("role").value = "";
   renderMembers();
 };
 
 function render(){
+  ensureActiveClan();
   renderClans();
   renderPersons();
   renderMembers();
